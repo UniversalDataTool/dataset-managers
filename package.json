@@ -19,6 +19,7 @@
     "mock-local-storage": "^1.1.15"
   },
   "dependencies": {
+    "rfc6902": "^4.0.1",
     "seamless-immutable": "^7.1.4",
     "seamless-immutable-patch": "^1.0.5"
   }

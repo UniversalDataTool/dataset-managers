@@ -70,4 +70,30 @@ export default async (dm, t) => {
   await summaryUpdatePromise
 
   t.is((await dm.getSummary()).samples.length, 1)
+
+  let ds = await dm.getDataset()
+
+  t.like(ds, {
+    interface: { type: "image_classification" },
+  })
+  t.like(ds.samples[0], {
+    imageUrl: "https://example.com/image2.png",
+  })
+
+  summaryUpdatePromise = new Promise((resolve) =>
+    dm.once("summary-changed", resolve)
+  )
+  await dm.setDataset({
+    ...ds,
+    samples: ds.samples.concat([
+      {
+        imageUrl: "https://example.com/image3.png",
+      },
+    ]),
+  })
+
+  await summaryUpdatePromise
+
+  summary = await dm.getSummary()
+  t.is(summary.samples.length, 2)
 }

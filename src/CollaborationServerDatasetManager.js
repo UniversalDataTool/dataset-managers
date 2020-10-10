@@ -1,6 +1,7 @@
 import { EventEmitter } from "events"
 import seamlessImmutable from "seamless-immutable"
 import seamlessImmutablePatch from "seamless-immutable-patch"
+import rfc6902 from "rfc6902"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 
@@ -53,7 +54,6 @@ class CollaborativeDatasetManager extends EventEmitter {
         const patchWithoutSampleUpdates = patch.filter(
           (p) => !p.path.startsWith("/samples")
         )
-
         this.ds = seamlessImmutablePatch(this.ds, patchWithoutSampleUpdates)
 
         this.summaryVersion = latestVersion
@@ -162,7 +162,12 @@ class CollaborativeDatasetManager extends EventEmitter {
       await this.createNewSession(newUDT)
       this.emit("dataset-reloaded")
     } else {
-      throw new Error("You can't do this in a collaborative session")
+      const latestDS = await this.getDataset()
+      const patch = rfc6902.createPatch(latestDS, newUDT)
+      await fetch(`${this.url}/api/session/${this.sessionId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ patch }),
+      })
     }
   }
 
