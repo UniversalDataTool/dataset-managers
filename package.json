@@ -5,9 +5,6 @@
   "type": "module",
   "license": "MIT",
   "repository": "github:UniversalDataTool/dataset-managers",
-  "engines": {
-    "node": ">=14.0"
-  },
   "scripts": {
     "test": "ava tests/**/*.test.js"
   },
