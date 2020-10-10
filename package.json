@@ -1,0 +1,23 @@
+{
+  "name": "udt-dataset-managers",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0"
+  },
+  "scripts": {
+    "test": "ava tests/**/*.test.js"
+  },
+  "devDependencies": {
+    "ava": "^3.13.0",
+    "browser-env": "^3.3.0",
+    "isomorphic-fetch": "^3.0.0",
+    "mock-local-storage": "^1.1.15"
+  },
+  "dependencies": {
+    "seamless-immutable": "^7.1.4",
+    "seamless-immutable-patch": "^1.0.5"
+  }
+}
