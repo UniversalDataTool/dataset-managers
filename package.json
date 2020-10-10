@@ -6,9 +6,13 @@
   "license": "MIT",
   "repository": "github:UniversalDataTool/dataset-managers",
   "scripts": {
+    "build": "babel src --out-dir dist",
     "test": "ava tests/**/*.test.js"
   },
   "devDependencies": {
+    "@babel/cli": "^7.11.6",
+    "@babel/core": "^7.11.6",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
     "@semantic-release/git": "^9.0.0",
     "ava": "^3.13.0",
     "browser-env": "^3.3.0",
@@ -19,5 +23,13 @@
     "rfc6902": "^4.0.1",
     "seamless-immutable": "^7.1.4",
     "seamless-immutable-patch": "^1.0.5"
+  },
+  "babel": {
+    "ignore": [
+      "./src/DatasetManager.type.js"
+    ],
+    "plugins": [
+      "@babel/plugin-proposal-class-properties"
+    ]
   }
 }
