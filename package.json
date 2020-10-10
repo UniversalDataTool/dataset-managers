@@ -17,7 +17,9 @@
     "ava": "^3.13.0",
     "browser-env": "^3.3.0",
     "isomorphic-fetch": "^3.0.0",
-    "mock-local-storage": "^1.1.15"
+    "mock-local-storage": "^1.1.15",
+    "tmp": "^0.2.1",
+    "udt-collaboration-server": "^1.0.4"
   },
   "dependencies": {
     "rfc6902": "^4.0.1",
