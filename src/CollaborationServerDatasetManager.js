@@ -19,7 +19,7 @@ class CollaborativeDatasetManager extends EventEmitter {
   ds = null
 
   pollingInterval = 1000
-  requestTimeout = 5000
+  requestTimeout = 120000
 
   // TODO we should cache samples in the future to allow preloading
   // currentlyLoadedSampleMap = {}
