@@ -6,7 +6,13 @@ A Dataset Manager manages the asynchronous access and saving of a Universal Data
 save to memory, while others save to disk, others may save to a server. Each
 dataset manager shares common test suites, so they're all collected here.
 
-To test this you need to be using Node 14 (for es6 module support).
+## Tests
+
+**To run tests this you need to be using Node 14 (for es6 module support).**
+
+Try running `nvm use 14`
+
+Then you can run `yarn test` to test each dataset manager.
 
 ### Why was this broken out?
 

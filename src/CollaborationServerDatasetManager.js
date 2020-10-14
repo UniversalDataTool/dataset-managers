@@ -25,12 +25,9 @@ class CollaborativeDatasetManager extends EventEmitter {
   // currentlyLoadedSampleMap = {}
   // currentlyLoadedSampleIds = []
 
-  constructor() {
+  constructor({ serverUrl } = {}) {
     super()
-    this.url = (
-      JSON.parse(window.localStorage.app_config)["collaborationServer.url"] ||
-      defaultCollaborationServer
-    )
+    this.url = (serverUrl || defaultCollaborationServer)
       .trim()
       .replace(/\/+$/, "")
 
