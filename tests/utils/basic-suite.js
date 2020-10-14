@@ -1,9 +1,13 @@
 export default async (dm, t) => {
+  let stepsCompleted = 0
+  const stepLog = (...args) => console.log(`[${1 + stepsCompleted++}]`, ...args)
+
   const datasetReloadPromise = new Promise((resolve) =>
     dm.once("dataset-reloaded", resolve)
   )
 
-  dm.setDataset({
+  stepLog("setting dataset...")
+  await dm.setDataset({
     interface: {
       type: "image_classification",
     },
@@ -12,6 +16,7 @@ export default async (dm, t) => {
 
   await datasetReloadPromise
 
+  stepLog("getting interface...")
   const iface = await dm.getDatasetProperty("interface")
 
   t.deepEqual(iface.type, "image_classification")
@@ -20,6 +25,7 @@ export default async (dm, t) => {
     dm.once("summary-changed", resolve)
   )
 
+  stepLog("adding samples...")
   dm.addSamples([
     {
       imageUrl: "https://example.com/image1.png",
@@ -31,6 +37,7 @@ export default async (dm, t) => {
 
   await summaryUpdatePromise
 
+  stepLog("getting summary...")
   let summary = await dm.getSummary()
 
   t.like(summary.samples[0], {
@@ -47,6 +54,7 @@ export default async (dm, t) => {
   summaryUpdatePromise = new Promise((resolve) =>
     dm.once("summary-changed", resolve)
   )
+  stepLog("setting sample...")
   await dm.setSample(sampleRef, {
     ...s,
     annotation: "bat",
@@ -65,6 +73,7 @@ export default async (dm, t) => {
   summaryUpdatePromise = new Promise((resolve) =>
     dm.once("summary-changed", resolve)
   )
+  stepLog("removing sample...")
   await dm.removeSamples([sampleRef])
 
   await summaryUpdatePromise
@@ -83,6 +92,8 @@ export default async (dm, t) => {
   summaryUpdatePromise = new Promise((resolve) =>
     dm.once("summary-changed", resolve)
   )
+
+  stepLog("setting dataset (2)...")
   await dm.setDataset({
     ...ds,
     samples: ds.samples.concat([

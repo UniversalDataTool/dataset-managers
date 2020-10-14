@@ -1,6 +1,5 @@
 global.window = {}
 import "mock-local-storage"
-import "isomorphic-fetch"
 global.window.localStorage = global.localStorage
 import CollaborationServerDatasetManager from "../src/CollaborationServerDatasetManager.js"
 import test from "ava"
@@ -16,7 +15,22 @@ test("CollaborationServerDatasetManager Basic Suite", async (t) => {
   })
   const dm = new CollaborationServerDatasetManager()
 
-  await basicSuite(dm, t)
+  return basicSuite(dm, t).then(() => {
+    t.pass("completed basic suite")
+  })
+})
 
-  t.pass("completed basic suite")
+test("CollaborationServerDatasetManager when the server isn't working", async (t) => {
+  window.localStorage.app_config = JSON.stringify({
+    "collaborationServer.url": "http://example.com:1234", // non-existant server
+  })
+  const dm = new CollaborationServerDatasetManager()
+  await t.throwsAsync(
+    dm.setDataset({
+      interface: {
+        type: "image_classification",
+      },
+      samples: [],
+    })
+  )
 })

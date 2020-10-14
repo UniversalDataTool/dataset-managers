@@ -2,6 +2,7 @@ import { EventEmitter } from "events"
 import seamlessImmutable from "seamless-immutable"
 import seamlessImmutablePatch from "seamless-immutable-patch"
 import rfc6902 from "rfc6902"
+import axios from "axios"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 
@@ -16,6 +17,9 @@ class CollaborativeDatasetManager extends EventEmitter {
   sessionId = null
   summaryVersion = null
   ds = null
+
+  pollingInterval = 1000
+  requestTimeout = 5000
 
   // TODO we should cache samples in the future to allow preloading
   // currentlyLoadedSampleMap = {}
@@ -34,21 +38,37 @@ class CollaborativeDatasetManager extends EventEmitter {
   }
 
   createNewSession = async (ds) => {
-    const res = await fetch(`${this.url}/api/session`, {
-      method: "POST",
-      body: JSON.stringify({ udt: ds }),
-    }).then((r) => r.json())
+    const endpoint = `${this.url}/api/session`
+    const res = await axios
+      .post(endpoint, { udt: ds }, { timeout: this.requestTimeout })
+      .catch((e) => {
+        throw new Error(
+          `Creating collaborative session failed (via POST "${endpoint}")\n\n${e.toString()}`
+        )
+      })
+      .then((r) => r.data)
+      .catch((e) => {
+        throw new Error(
+          `Couldn't parse response from collaborative server: ${e.toString()}`
+        )
+      })
     this.sessionId = res.short_id
     this.summaryVersion = res.summary_version
-    this.diffPollingInterval = setInterval(this.pollDiffs, 1000)
-    this.getSummary()
+    this.diffPollingInterval = setInterval(this.pollDiffs, this.pollingInterval)
+    await this.getSummary()
   }
 
   pollDiffs = async () => {
     if (this.sessionId && this.ds) {
-      const { patch, latestVersion } = await fetch(
-        `${this.url}/api/session/${this.sessionId}/diffs?since=${this.summaryVersion}`
-      ).then((r) => r.json())
+      const {
+        patch,
+        latestVersion,
+      } = await axios
+        .get(
+          `${this.url}/api/session/${this.sessionId}/diffs?since=${this.summaryVersion}`,
+          { timeout: this.requestTimeout }
+        )
+        .then((r) => r.data)
       if (latestVersion !== this.summaryVersion) {
         // Update summary object, but not samples
         const patchWithoutSampleUpdates = patch.filter(
@@ -79,9 +99,11 @@ class CollaborativeDatasetManager extends EventEmitter {
   getSummary = async () => {
     // TODO
     if (!this.ds) {
-      const res = await fetch(
-        `${this.url}/api/session/${this.sessionId}`
-      ).then((r) => r.json())
+      const res = await axios
+        .get(`${this.url}/api/session/${this.sessionId}`, {
+          timeout: this.requestTimeout,
+        })
+        .then((r) => r.data)
       const { summaryVersion, summary, name, interface: iface } = res
       this.ds = seamless({
         summary,
@@ -105,9 +127,9 @@ class CollaborativeDatasetManager extends EventEmitter {
   setDatasetProperty = async (key, newValue) => {
     // TODO
     this.ds = setIn(this.ds, [key], newValue)
-    await fetch(`${this.url}/api/session/${this.sessionId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
+    await axios.patch(
+      `${this.url}/api/session/${this.sessionId}`,
+      {
         patch: [
           {
             op: "replace",
@@ -115,38 +137,46 @@ class CollaborativeDatasetManager extends EventEmitter {
             value: newValue,
           },
         ],
-      }),
-    })
+      },
+      { timeout: this.requestTimeout }
+    )
     this.emit("dataset-property-changed", { key })
   }
 
   getSampleByIndex = async (index) => {
-    const res = await fetch(
-      `${this.url}/api/session/${this.sessionId}/sample/${index}`
-    ).then((r) => r.json())
+    const res = await axios
+      .get(`${this.url}/api/session/${this.sessionId}/sample/${index}`, {
+        timeout: this.requestTimeout,
+      })
+      .then((r) => r.data)
     return res
   }
   getSample = async (sampleRefId) => {
-    const res = await fetch(
-      `${this.url}/api/session/${this.sessionId}/sample/${sampleRefId}`
-    ).then((r) => r.json())
+    const res = await axios
+      .get(`${this.url}/api/session/${this.sessionId}/sample/${sampleRefId}`, {
+        timeout: this.requestTimeout,
+      })
+      .then((r) => r.data)
     return res
   }
 
   // Set a new value for a sample
   setSample = async (sampleRefId, newSample) => {
-    await fetch(`${this.url}/api/session/${this.sessionId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        patch: [
-          {
-            op: "replace",
-            path: `/samples/${sampleRefId}`,
-            value: newSample,
-          },
-        ],
-      }),
-    }).then((r) => r.json())
+    await axios
+      .patch(
+        `${this.url}/api/session/${this.sessionId}`,
+        {
+          patch: [
+            {
+              op: "replace",
+              path: `/samples/${sampleRefId}`,
+              value: newSample,
+            },
+          ],
+        },
+        { timeout: this.requestTimeout }
+      )
+      .then((r) => r.data)
   }
 
   // Called whenever application config is updated. Maybe you need the app config
@@ -164,18 +194,19 @@ class CollaborativeDatasetManager extends EventEmitter {
     } else {
       const latestDS = await this.getDataset()
       const patch = rfc6902.createPatch(latestDS, newUDT)
-      await fetch(`${this.url}/api/session/${this.sessionId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ patch }),
+      await axios.patch(`${this.url}/api/session/${this.sessionId}`, {
+        patch,
       })
     }
   }
 
   // Get entire JSON dataset
   getDataset = async () => {
-    const fullDataset = await fetch(
-      `${this.url}/api/session/${this.sessionId}/download`
-    ).then((r) => r.json())
+    const fullDataset = await axios
+      .get(`${this.url}/api/session/${this.sessionId}/download`, {
+        timeout: this.requestTimeout,
+      })
+      .then((r) => r.data)
     return fullDataset
   }
 
@@ -184,33 +215,35 @@ class CollaborativeDatasetManager extends EventEmitter {
     if (!this.sessionId) throw new Error("Not in a collaborative session")
     if (!this.ds) await this.getSummary()
     const lastSampleIndex = this.ds.summary.samples.length
-    await fetch(`${this.url}/api/session/${this.sessionId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
+    await axios.patch(
+      `${this.url}/api/session/${this.sessionId}`,
+      {
         patch: newSamples.map((s, i) => ({
           op: "add",
           path: `/samples/${lastSampleIndex + i}`,
           value: s,
         })),
-      }),
-    })
+      },
+      { timeout: this.requestTimeout }
+    )
   }
 
   // Remove samples
   removeSamples = async (sampleIds) => {
     if (!this.sessionId) throw new Error("Not in a collaborative session")
     if (!this.ds) await this.getSummary()
-    await fetch(`${this.url}/api/session/${this.sessionId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
+    await axios.patch(
+      `${this.url}/api/session/${this.sessionId}`,
+      {
         patch: this.ds.summary.samples
           .filter((s) => sampleIds.includes(s._id))
           .map((s) => ({
             op: "remove",
             path: `/samples/${s._id}`,
           })),
-      }),
-    })
+      },
+      { timeout: this.requestTimeout }
+    )
   }
 
   // -------------------------------
