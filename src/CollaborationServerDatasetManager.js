@@ -51,7 +51,7 @@ class CollaborativeDatasetManager extends EventEmitter {
       })
     this.sessionId = res.short_id
     this.summaryVersion = res.summary_version
-    this.diffPollingInterval = setInterval(this.pollDiffs, this.pollingInterval)
+    this.diffPollingTimeout = setTimeout(this.pollDiffs, this.pollingInterval)
     await this.getSummary()
   }
 
@@ -59,7 +59,8 @@ class CollaborativeDatasetManager extends EventEmitter {
     this.sessionId = sessionId
     console.log(`joining session "${this.sessionId}"`)
     await this.getSummary()
-    this.diffPollingInterval = setInterval(this.pollDiffs, this.pollingInterval)
+    clearTimeout(this.pollDiffs)
+    this.diffPollingTimeout = setTimeout(this.pollDiffs, this.pollingInterval)
   }
 
   pollDiffs = async () => {
@@ -85,6 +86,9 @@ class CollaborativeDatasetManager extends EventEmitter {
       }
     } else {
       this.getSummary()
+    }
+    if (this.sessionId) {
+      setTimeout(this.pollDiffs, this.pollingInterval)
     }
   }
 
