@@ -70,7 +70,7 @@ interface DatasetManager {
 
   // Called whenever application config is updated. Maybe you need the app config
   // to access some authentication variables
-  onUpdateAppConfig?: (appConfig) => void;
+  onUpdateAppConfig?: (appConfig: Object) => void;
 
   // Datasets can be explictly saved for some interfaces (e.g. FileSystem)
   explicitSave?: () => Promise<void>;

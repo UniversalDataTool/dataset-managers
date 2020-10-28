@@ -1,3 +1,5 @@
+import { EventEmitter } from "events"
+
 class CognitoDatasetManager extends EventEmitter {
   type = "cognito"
 
@@ -26,42 +28,42 @@ class CognitoDatasetManager extends EventEmitter {
   // training configuration. getDatasetProperty('name') returns the name.
   // You can and should create a new object here if you have custom stuff you
   // want to store in the dataset
-  getDatasetProperty = async (key: string) => {
+  getDatasetProperty = async (key) => {
     // Promise<Object>
     return {}
   }
-  setDatasetProperty = async (key: string, newValue: Object) => {
+  setDatasetProperty = async (key, newValue) => {
     //Promise<Object>
     return {}
   }
 
   // Two ways to get a sample. Using `sampleRefId` will return the sample with
   // an `_id` === sampleRefId
-  getSampleByIndex = async (index: number) => {
+  getSampleByIndex = async (index) => {
     //Promise<Object>;
     return {}
   }
-  getSample = async (sampleRefId: string) => {
+  getSample = async (sampleRefId) => {
     //Promise<Object>;
   }
 
   // Set a new value for a sample
-  setSample = async (sampleRefId: string, newSample: Object) => {
+  setSample = async (sampleRefId, newSample) => {
     //Promise<void>;
   }
 
   // Add samples to the dataset
-  addSamples = async (samples: Array<Object>) => {
+  addSamples = async (samples) => {
     // Promise<void>;
   }
 
   // Remove samples
-  removeSamples = (sampleIds: Array<string>) => {
+  removeSamples = (sampleIds) => {
     //Promise<void>;
   }
 
   // Import an entire UDT JSON file
-  setDataset = (udtObject: Object) => {
+  setDataset = (udtObject) => {
     // Promise<void>;
   }
 
@@ -99,3 +101,5 @@ class CognitoDatasetManager extends EventEmitter {
   // We assume we can write to the dataset if not specified
   // isWritable?: () => boolean;
 }
+
+export default CognitoDatasetManager
