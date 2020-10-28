@@ -1,23 +1,34 @@
+import "dotenv/config.js"
+import browserEnv from "browser-env"
+browserEnv()
+
 import CognitoDatasetManager from "../../src/CognitoDatasetManager.js"
 import test from "ava"
-import {authConfig, dummyUser} from "./authConfig.js"
+import getAuthConfig from "./get-auth-config.js"
 
-import Amplify, { Auth, Storage } from "aws-amplify"
+import Amplify from "aws-amplify"
 
+test("CollaborationServerDatasetManager when the server isn't working", async t => {
+  const authConfig = getAuthConfig()
 
-Amplify.default.configure(authConfig)
-let user = {}
-await Amplify.Auth.signIn(dummyUser.username, dummyUser.password)
-.then((_user)=>{
-  user = _user
-})
+  const dummyUser = {
+    username: process.env.DUMMY_USER_NAME,
+    password: process.env.DUMMY_USER_PASS
+  }
 
-//console.log(user)
+  Amplify.default.configure(authConfig)
+  let user = {}
+  await Amplify.Auth.signIn(dummyUser.username, dummyUser.password).then(
+    _user => {
+      user = _user
+    }
+  )
 
-test("CollaborationServerDatasetManager when the server isn't working", async (t) => {
-  const dm = new CognitoDatasetManager({authConfig})
+  const dm = new CognitoDatasetManager({ authConfig })
 
-  await Storage.list("", {level:"private"}).then((result) => {console.log(result)})
+  await Amplify.Storage.list("", { level: "private" }).then(result => {
+    console.log(result)
+  })
 
   //await dm.isReady()
 

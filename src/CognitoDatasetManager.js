@@ -1,22 +1,26 @@
 import { EventEmitter } from "events"
-import Amplify, {Storage} from "aws-amplify"
+import Amplify from "aws-amplify"
 
 class CognitoDatasetManager extends EventEmitter {
   type = "cognito"
 
   constructor({ authConfig } = {}) {
     super()
-    if (!authConfig.Auth.region) throw new Error('Auth region is required')
-    if (!authConfig.Auth.userPoolId) throw new Error('Auth userPoolId is required')
-    if (!authConfig.Auth.userPoolWebClientId) throw new Error('Auth userPoolWebClientId is required')
-    if (!authConfig.Auth.identityPoolId) throw new Error('Auth identityPoolId is required')
+    if (!authConfig.Auth.region) throw new Error("Auth region is required")
+    if (!authConfig.Auth.userPoolId)
+      throw new Error("Auth userPoolId is required")
+    if (!authConfig.Auth.userPoolWebClientId)
+      throw new Error("Auth userPoolWebClientId is required")
+    if (!authConfig.Auth.identityPoolId)
+      throw new Error("Auth identityPoolId is required")
 
-    if (!authConfig.Storage.AWSS3.bucket) throw new Error('Storage bucket name is required')
-    if (!authConfig.Storage.AWSS3.region) throw new Error('Storage bucket region is required')
+    if (!authConfig.Storage.AWSS3.bucket)
+      throw new Error("Storage bucket name is required")
+    if (!authConfig.Storage.AWSS3.region)
+      throw new Error("Storage bucket region is required")
 
     this.authConfig = authConfig
     console.log(Amplify.default.configure(this.authConfig))
-
   }
 
   // Called frequently to make sure the dataset is accessible, return true if
@@ -25,10 +29,10 @@ class CognitoDatasetManager extends EventEmitter {
   // Protip: If you have a server you should establish a connection here (if not connected)
   isReady = async () => {
     await Amplify.Storage.list("", { level: "public" })
-      .then((result) =>{
+      .then(result => {
         console.log(result)
       })
-      .catch((err) => console.log(err))
+      .catch(err => console.log(err))
   }
 
   // Gives a summary of the dataset, mostly just indicating if the samples
@@ -44,7 +48,7 @@ class CognitoDatasetManager extends EventEmitter {
   // training configuration. getDatasetProperty('name') returns the name.
   // You can and should create a new object here if you have custom stuff you
   // want to store in the dataset
-  getDatasetProperty = async (key) => {
+  getDatasetProperty = async key => {
     // Promise<Object>
     return {}
   }
@@ -55,11 +59,11 @@ class CognitoDatasetManager extends EventEmitter {
 
   // Two ways to get a sample. Using `sampleRefId` will return the sample with
   // an `_id` === sampleRefId
-  getSampleByIndex = async (index) => {
+  getSampleByIndex = async index => {
     //Promise<Object>;
     return {}
   }
-  getSample = async (sampleRefId) => {
+  getSample = async sampleRefId => {
     //Promise<Object>;
   }
 
@@ -69,17 +73,17 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   // Add samples to the dataset
-  addSamples = async (samples) => {
+  addSamples = async samples => {
     // Promise<void>;
   }
 
   // Remove samples
-  removeSamples = (sampleIds) => {
+  removeSamples = sampleIds => {
     //Promise<void>;
   }
 
   // Import an entire UDT JSON file
-  setDataset = (udtObject) => {
+  setDataset = udtObject => {
     // Promise<void>;
   }
 
@@ -94,7 +98,7 @@ class CognitoDatasetManager extends EventEmitter {
   // settings or for displaying notifications.
   // -------------------------------
 
-  on = (event) => {
+  on = event => {
     // void;
   }
 

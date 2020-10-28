@@ -1,2 +1,3 @@
 node_modules
 udt-collaboration-server.db
+.env
