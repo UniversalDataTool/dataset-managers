@@ -1,3 +1,4 @@
 node_modules
 dist
 udt-collaboration-server.db
+tests/CognitoServer/authConfig.js

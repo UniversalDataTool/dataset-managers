@@ -1,19 +1,35 @@
 import { EventEmitter } from "events"
+import Amplify, {Storage} from "aws-amplify"
 
 class CognitoDatasetManager extends EventEmitter {
   type = "cognito"
 
-  constructor({ region /* ... other cognito stuff */ } = {}) {
+  constructor({ authConfig } = {}) {
     super()
-    if (!region) throw new Error('"region" is required')
-    this.region = region
+    if (!authConfig.Auth.region) throw new Error('Auth region is required')
+    if (!authConfig.Auth.userPoolId) throw new Error('Auth userPoolId is required')
+    if (!authConfig.Auth.userPoolWebClientId) throw new Error('Auth userPoolWebClientId is required')
+    if (!authConfig.Auth.identityPoolId) throw new Error('Auth identityPoolId is required')
+
+    if (!authConfig.Storage.AWSS3.bucket) throw new Error('Storage bucket name is required')
+    if (!authConfig.Storage.AWSS3.region) throw new Error('Storage bucket region is required')
+
+    this.authConfig = authConfig
+    console.log(Amplify.default.configure(this.authConfig))
+
   }
 
   // Called frequently to make sure the dataset is accessible, return true if
   // the dataset can be read. You might return false if there isn't a dataset
   // loaded
   // Protip: If you have a server you should establish a connection here (if not connected)
-  isReady = async () => {}
+  isReady = async () => {
+    await Amplify.Storage.list("", { level: "public" })
+      .then((result) =>{
+        console.log(result)
+      })
+      .catch((err) => console.log(err))
+  }
 
   // Gives a summary of the dataset, mostly just indicating if the samples
   // are annotated are not.

@@ -26,6 +26,7 @@
     "udt-collaboration-server": "^1.0.4"
   },
   "dependencies": {
+    "aws-amplify": "^3.3.4",
     "axios": "^0.20.0",
     "rfc6902": "^4.0.1",
     "seamless-immutable": "^7.1.4",
