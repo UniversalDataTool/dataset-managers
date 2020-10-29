@@ -8,11 +8,19 @@ dataset manager shares common test suites, so they're all collected here.
 
 ## Tests
 
+## Ava Tests
+
+Ava tests are preferred over browser tests, since they're easier to set up.
+
 **To run tests this you need to be using Node 14 (for es6 module support).**
 
 Try running `nvm use 14`
 
 Then you can run `yarn test` to test each dataset manager.
+
+## Browser Tests
+
+Some DatasetManagers only run in a browser. For these dataset managers, you can just run `yarn run browser:dev`, they all run on [cypress](https://cypress.io).
 
 ### Why was this broken out?
 

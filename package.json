@@ -7,10 +7,11 @@
   "repository": "github:UniversalDataTool/dataset-managers",
   "scripts": {
     "build": "babel src --out-dir dist",
+    "build:watch": "babel --watch src --out-dir dist",
     "test": "npm run test:node",
     "test:node": "ava tests/**/*.test.js",
-    "test:browser": "yarn run cypress run",
-    "dev:browser": "yarn run cypress open"
+    "test:browser": "dotenv -- yarn run cypress run",
+    "dev:browser": "concurrently 'dotenv -- yarn run cypress open' 'npm run build:watch'"
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",
@@ -20,8 +21,10 @@
     "@semantic-release/git": "^9.0.0",
     "ava": "^3.13.0",
     "babel-eslint": "^10.1.0",
+    "browser-env": "^3.3.0",
     "cypress": "^5.5.0",
     "dotenv": "^8.2.0",
+    "dotenv-cli": "^4.0.0",
     "eslint": "^7.12.1",
     "eslint-plugin-cypress": "^2.11.2",
     "eslint-plugin-react": "^7.21.5",
