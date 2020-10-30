@@ -80,5 +80,8 @@
         {}
       ]
     }
+  },
+  "prettier": {
+    "semi": false
   }
 }
