@@ -11,7 +11,7 @@
     "test": "npm run test:node",
     "test:node": "ava tests/**/*.test.js",
     "test:browser": "dotenv -- yarn run cypress run",
-    "dev:browser": "concurrently 'dotenv -- yarn run cypress open' 'npm run build:watch'"
+    "dev:browser": "concurrently \"dotenv -- yarn run cypress open\" \"npm run build:watch\""
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",
@@ -36,6 +36,7 @@
   "dependencies": {
     "aws-amplify": "^3.3.4",
     "axios": "^0.20.0",
+    "concurrently": "^5.3.0",
     "rfc6902": "^4.0.1",
     "seamless-immutable": "^7.1.4",
     "seamless-immutable-patch": "^1.0.5"
