@@ -14,6 +14,7 @@ describe("Cognito Server Tests", () => {
       const dm = new CognitoDatasetManager({ authConfig, dummyUser });
 
       expect(true).to.equal(true);
+      expect(Cypress.env().COGNITO_USER_NAME).to.equal("marc@marc.com");
 
       cy.log(await dm.isReady());
 
