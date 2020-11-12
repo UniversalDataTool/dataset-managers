@@ -11,7 +11,7 @@ class CognitoDatasetManager extends EventEmitter {
 
   constructor({
     authConfig,
-    dummyUser,
+    user,
     dataPrivacyLevel = "private",
     privateDataExpire = 24 * 60 * 60,
   } = {}) {
@@ -35,15 +35,7 @@ class CognitoDatasetManager extends EventEmitter {
 
     console.log(Amplify.configure(this.authConfig))
 
-    this.cognitoSetUp = new Promise((resolve, reject) => {
-      Auth.signIn(dummyUser.username, dummyUser.password)
-        .then((_user) => {
-          resolve()
-        })
-        .catch((err) => {
-          reject()
-        })
-    })
+    this.cognitoSetUp = Auth.signIn(user.username, user.password)
   }
 
   // Called frequently to make sure the dataset is accessible, return true if
@@ -52,61 +44,24 @@ class CognitoDatasetManager extends EventEmitter {
   // Protip: If you have a server you should establish a connection here (if not connected)
   isReady = async () => {
     await this.cognitoSetUp
-      .then(() => {
-        this.worked = true
-      })
-      .catch(() => {
-        this.worked = false
-      })
-    return this.worked
-  }
-
-  getProjects = async () => {
-    // should return a list of available projects to open
-    if (this.projects) {
-      return this.projects
-    } else {
-      this.projects = new Set()
-      await Storage.list("", { level: this.dataPrivacyLevel })
-        .then((result) => {
-          console.log(result)
-          result.forEach((obj) => {
-            if (obj.size) {
-              let possibleProjects = obj.key.split("/")[0]
-              if (possibleProjects) this.projects.add(possibleProjects)
-            } else {
-              if (obj.key.split("/")[0] !== "") {
-                this.projects.add(obj.key.split("/")[0])
-              }
-            }
-          })
-        })
-        .catch((err) => {
-          this.projects = null
-        })
-
-      return this.projects
-    }
+    return true
   }
 
   getDataListFromProject = async ({
-    targetProject = false,
+    projectName = false,
     noExtensions = false,
   }) => {
-    if (!targetProject) targetProject = this.projectName
+    if (!projectName) projectName = this.projectName
 
     let samples = []
-    await Amplify.Storage.list(`${targetProject}/data/`, {
+    await Amplify.Storage.list(`${projectName}/data/`, {
       level: this.dataPrivacyLevel,
+    }).then((result) => {
+      samples = result
+        .filter((obj) => obj.key !== `${projectName}/data/`)
+        .map((obj) => obj.key)
     })
-      .then((result) => {
-        samples = result
-          .filter((obj) => obj.key !== `${targetProject}/data/`)
-          .map((obj) => obj.key)
-      })
-      .catch((err) => {
-        samples = null
-      })
+
     if (noExtensions) {
       samples = samples.map((eachFile) => {
         return eachFile.replace(/\.[^.]+$/, "")
@@ -116,23 +71,20 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   getAnnotationsListFromProject = async ({
-    targetProject = false,
+    projectName = false,
     noExtensions = false,
   }) => {
-    if (!targetProject) targetProject = this.projectName
+    if (!projectName) projectName = this.projectName
 
     let samples = []
-    await Amplify.Storage.list(`${targetProject}/annotations/`, {
+    await Amplify.Storage.list(`${projectName}/annotations/`, {
       level: this.dataPrivacyLevel,
+    }).then((result) => {
+      samples = result
+        .filter((obj) => obj.key !== `${projectName}/annotations/`)
+        .map((obj) => obj.key)
     })
-      .then((result) => {
-        samples = result
-          .filter((obj) => obj.key !== `${targetProject}/annotations/`)
-          .map((obj) => obj.key)
-      })
-      .catch((err) => {
-        samples = null
-      })
+
     if (noExtensions) {
       samples = samples.map((eachFile) => {
         return eachFile.replace(/\.[^.]+$/, "")
@@ -141,13 +93,37 @@ class CognitoDatasetManager extends EventEmitter {
     return samples
   }
 
+  getProjects = async () => {
+    // This should be moved in a project manager later on
+    // Should return a list of available projects to open
+    if (this.projects) {
+      return this.projects
+    } else {
+      await Storage.list("", { level: this.dataPrivacyLevel }).then(
+        (result) => {
+          this.projects = new Set(
+            result
+              .map((obj) => {
+                if (obj.key.split("/")[0] !== "") {
+                  return obj.key.split("/")[0]
+                }
+              })
+              .filter((n) => n)
+          )
+        }
+      )
+      return this.projects
+    }
+  }
+
   setProject = (projectName) => {
+    // This should be moved in a project manager later on
     this.projectName = projectName
   }
 
   createProject = async (newProjectName) => {
+    // This should be moved in a project manager later on
     const projects = await this.getProjects()
-    let status = false
 
     if (projects && !projects.has(newProjectName)) {
       await Storage.put(
@@ -158,22 +134,17 @@ class CognitoDatasetManager extends EventEmitter {
           contentType: "application/json",
         }
       )
-        .then((result) => {
-          status = true
-        })
-        .catch((err) => {
-          console.log(err)
-        })
+      return true
     } else {
       console.log("Project with the same name already exist")
+      return false
     }
-    return status
   }
 
   getSamplesSummary = async () => {
     const data = await this.getDataListFromProject({})
     const annotations = await this.getAnnotationsListFromProject({
-      projectTarget: this.projectName,
+      projectName: this.projectName,
       noExtensions: true,
     })
 
@@ -266,15 +237,9 @@ class CognitoDatasetManager extends EventEmitter {
     let sample = await this.getSample(sampleRefId)
 
     return sample
-    //Promise<Object>;
-    //return {}
   }
   getSample = async (sampleRefId) => {
-    //Promise<Object>;
-
     const fileExtension = sampleRefId.split(".").pop()
-
-    console.log(fileExtension)
 
     // handle images/audio/video data
     const allowedImageExtensions = ["jpeg", "jpg", "png"]
@@ -305,7 +270,6 @@ class CognitoDatasetManager extends EventEmitter {
 
     // handle text data
     const allowedTextExtensions = ["txt"]
-
     if (allowedTextExtensions.includes(fileExtension.toLowerCase())) {
       return {
         textUrl: await this.getDataUrl(sampleRefId),
@@ -315,7 +279,7 @@ class CognitoDatasetManager extends EventEmitter {
 
     // handle time series
     const allowedTimeSeriesExtensions = ["csv"]
-    if (allowedTextExtensions.includes(fileExtension.toLowerCase())) {
+    if (allowedTimeSeriesExtensions.includes(fileExtension.toLowerCase())) {
       return {
         csvUrl: await this.getDataUrl(sampleRefId),
         annotation: await this.getJsonAnnotation(sampleRefId),
@@ -326,6 +290,19 @@ class CognitoDatasetManager extends EventEmitter {
   // Set a new value for a sample
   setSample = async (sampleRefId, newSample) => {
     //Promise<void>;
+    await Storage.put(
+      sampleRefId
+        .replace(/\.[^.]+$/, ".json")
+        .replace("/data/", "/annotations/"),
+      newSample,
+      {
+        level: this.dataPrivacyLevel,
+        contentType: "application/json",
+      }
+    ).then((response) => {
+      console.log(response)
+      return response
+    })
   }
 
   // Add samples to the dataset

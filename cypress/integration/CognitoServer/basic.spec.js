@@ -11,7 +11,7 @@ describe("Cognito Server Tests", () => {
         password: Cypress.env().COGNITO_USER_PASS,
       }
 
-      const dm = new CognitoDatasetManager({ authConfig, dummyUser })
+      const dm = new CognitoDatasetManager({ authConfig, user: dummyUser })
 
       expect(true).to.equal(true)
 
@@ -28,6 +28,13 @@ describe("Cognito Server Tests", () => {
       cy.log(await dm.getDatasetProperty("name"))
 
       cy.log(dm.getSampleByIndex(0))
+
+      cy.log(
+        await dm.setSample(
+          "imageProject/data/0e5ac2c16dfdf6029507de7f38e7766b (2).jpg",
+          { annotations: [{ a: "something" }, { n: "more things" }] }
+        )
+      )
     })
   })
 })
