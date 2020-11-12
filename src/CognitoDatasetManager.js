@@ -57,7 +57,7 @@ class CognitoDatasetManager extends EventEmitter {
         this.projects = result
           .filter(
             (obj) =>
-              obj.key.endsWith("/") &&
+              (obj.key.endsWith("/")||obj.key.endsWith("/*.*")) &&
               obj.key.split("/").filter((item) => item).length === 1
           )
           .map((obj) => obj.key);
