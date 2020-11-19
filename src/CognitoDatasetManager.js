@@ -63,7 +63,7 @@ class CognitoDatasetManager extends EventEmitter {
 
   getSummary = async () => {
     if (!this.ds) {
-      var index =  await this.getJSON(this.projectName+"/index.json")
+      var index = await this.getJSON(this.projectName + "/index.json")
       this.ds = seamless({
         summary: {
           samples: await this.getSamplesSummary(),
@@ -81,8 +81,8 @@ class CognitoDatasetManager extends EventEmitter {
 
   getProjects = async () => {
     var list = await Storage.list("", { level: this.dataPrivacyLevel })
-    var projets =new Set()
-    
+    var projets = new Set()
+
     await Promise.all(
       list.map(async (obj) => {
         if (obj.size) {
@@ -121,11 +121,9 @@ class CognitoDatasetManager extends EventEmitter {
     return samples
   }*/
 
-  getListSamples = async ({
-    projectName = false,
-  }) => {
+  getListSamples = async ({ projectName = false }) => {
     if (!projectName) projectName = this.projectName
-    var result=await Storage.list(`${projectName}/samples/`, {
+    var result = await Storage.list(`${projectName}/samples/`, {
       level: this.dataPrivacyLevel,
     })
     let samples = result
@@ -144,14 +142,10 @@ class CognitoDatasetManager extends EventEmitter {
     const projects = await this.getProjects()
 
     if (projects && !projects.has(indexjson.name)) {
-      await Storage.put(
-        `${indexjson.name}/index.json`,
-        indexjson,
-        {
-          level: this.dataPrivacyLevel,
-          contentType: "application/json",
-        }
-      )
+      await Storage.put(`${indexjson.name}/index.json`, indexjson, {
+        level: this.dataPrivacyLevel,
+        contentType: "application/json",
+      })
       return true
     } else {
       console.log("Project with the same name already exist")
@@ -160,7 +154,7 @@ class CognitoDatasetManager extends EventEmitter {
   }
   readJSONAllSample = async (listSamples) => {
     var json = new Array(listSamples.length)
-    
+
     for (var i = 0; i < listSamples.length; i++) {
       json[i] = await this.getJSON(listSamples[i])
     }
@@ -172,8 +166,8 @@ class CognitoDatasetManager extends EventEmitter {
       level: this.dataPrivacyLevel,
       contentType: "application/json",
     })
-    var blob=await fetch(url)
-    var json =await blob.json()
+    var blob = await fetch(url)
+    var json = await blob.json()
     return json
   }
 
@@ -216,24 +210,24 @@ class CognitoDatasetManager extends EventEmitter {
         break
       case "name":
         var dataset = await this.getDataset()
-        dataset.name=newValue
+        dataset.name = newValue
         /*var assets=await Promise.all(
           summary.samples.map(async (obj) => {
             return await this.fetchAFile(obj._url)
           })
         )*/
         await this.removeProject(this.projectName),
-        await this.setDataset(dataset)
+          await this.setDataset(dataset)
         this.setProject(dataset.name)
         break
       default:
         var path = this.projectName + "/index.json"
         var jsonToChange = await this.getJSON(path)
-        jsonToChange[key]= newValue
+        jsonToChange[key] = newValue
         await this.setJSON(path, jsonToChange)
         break
     }
-    this.ds= undefined
+    this.ds = undefined
     await this.getSummary()
   }
 
@@ -255,12 +249,17 @@ class CognitoDatasetManager extends EventEmitter {
     return sample
   }
   getSample = async (sampleRefId) => {
-    var json =await this.getJSON(this.projectName + "/samples/" + sampleRefId + ".json")
+    var json = await this.getJSON(
+      this.projectName + "/samples/" + sampleRefId + ".json"
+    )
     return json
   }
 
   setSample = async (sampleRefId, newSample) => {
-    await this.setJSON(this.projectName+"/samples/"+sampleRefId+".json",newSample)
+    await this.setJSON(
+      this.projectName + "/samples/" + sampleRefId + ".json",
+      newSample
+    )
   }
 
   addFile = async (name, blob) => {
@@ -295,14 +294,13 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   removeSamples = async (sampleIds) => {
-    var result =await Storage.list(this.projectName+"/samples/",{
+    var result = await Storage.list(this.projectName + "/samples/", {
       level: this.dataPrivacyLevel,
     })
     await Promise.all(
       result.map(async (obj) => {
-        for(var i = 0;i<sampleIds.length;i++)
-        {
-          if(obj.key.includes("/"+sampleIds[i]+".json")){
+        for (var i = 0; i < sampleIds.length; i++) {
+          if (obj.key.includes("/" + sampleIds[i] + ".json")) {
             await Storage.remove(obj.key, {
               level: this.dataPrivacyLevel,
             })
@@ -313,28 +311,28 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   setDataset = async (udtObject) => {
-    var index = {name : udtObject.name, interface: udtObject.interface}
+    var index = { name: udtObject.name, interface: udtObject.interface }
 
-    var jsons=udtObject.samples
+    var jsons = udtObject.samples
     /*var assets=await Promise.all(
       summary.samples.map(async (obj) => {
         return await this.fetchAFile(obj._url)
       })
     )*/
     this.setProject(udtObject.name)
-    await Promise.all(
-    [
+    await Promise.all([
       await this.createProject(index),
-      await this.addSamples(jsons)
+      await this.addSamples(jsons),
       //await this.addFile()
-    ]
-    )
+    ])
   }
 
   getDataset = async () => {
-    var dataset = await this.getJSON(this.projectName+"/index.json")
+    var dataset = await this.getJSON(this.projectName + "/index.json")
 
-    dataset.samples=await this.readJSONAllSample(await this.getListSamples(false))
+    dataset.samples = await this.readJSONAllSample(
+      await this.getListSamples(false)
+    )
 
     return dataset
   }

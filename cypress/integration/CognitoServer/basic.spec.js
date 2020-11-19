@@ -66,7 +66,10 @@ describe("Cognito Server Tests", async () => {
   )
 
   await it("Test create project", async () => {
-    var index = {"name":samplesDummies.name,"interface":samplesDummies.interface}
+    var index = {
+      name: samplesDummies.name,
+      interface: samplesDummies.interface,
+    }
     await dm.createProject(index)
     var projects = await dm.getProjects(index)
     expect(projects).to.include(nameProjectTest)
@@ -81,7 +84,7 @@ describe("Cognito Server Tests", async () => {
     var sampleList = await dm.getListSamples(false)
     expect(sampleList.length).to.equal(0)
   })
-  
+
   await it("Test addSamples", async () => {
     await dm.addSamples(samplesDummies.samples)
     var annotationsList = await dm.getListSamples(false)
@@ -138,61 +141,60 @@ describe("Cognito Server Tests", async () => {
   })
 
   await it("Test setDatasetProperty", async () => {
-    await dm.setDatasetProperty("samples",samplesDummies.samples)
-    var summary =await dm.getSummary()
+    await dm.setDatasetProperty("samples", samplesDummies.samples)
+    var summary = await dm.getSummary()
     expect(summary.samples[1].hasAnnotation).to.equal(true)
-    
-    await dm.setDatasetProperty("name","TestCypress2")
+
+    await dm.setDatasetProperty("name", "TestCypress2")
     var projects = await dm.getProjects()
     expect(projects).to.include("TestCypress2")
     expect(projects).to.not.include(nameProjectTest)
 
-    await dm.setDatasetProperty("interface",{})
+    await dm.setDatasetProperty("interface", {})
     var value = await dm.getDatasetProperty("interface")
     expect(value.type).to.equal(undefined)
-
   })
 
-  await it("Test getSampleByIndex",async ()=>{
+  await it("Test getSampleByIndex", async () => {
     var sample = await dm.getSampleByIndex(0)
     expect(samplesDummies.samples[1]._id).to.include(sample._id)
   })
 
-  await it("Test getSample", async ()=>{
+  await it("Test getSample", async () => {
     var sample = await dm.getSample("shcscmhiv")
     expect(sample._id).to.equal("shcscmhiv")
   })
 
-  await it("Test setSample", async ()=>{
-    await dm.setSample("adfaef",{})
+  await it("Test setSample", async () => {
+    await dm.setSample("adfaef", {})
     var annotation = await dm.getListSamples(nameProjectTest)
     expect(annotation.length).to.equal(3)
   })
 
-  await it("Test removeSamples", async()=>{
+  await it("Test removeSamples", async () => {
     await dm.removeSamples(["adfaef"])
-    var list = await dm.getListSamples(false,false);
+    var list = await dm.getListSamples(false, false)
     expect(list.length).to.equal(2)
   })
 
-  await it("Test setDataset", async()=>{
+  await it("Test setDataset", async () => {
     samplesDummies.name = "TestCypress3"
     await dm.setDataset(samplesDummies)
-    var projects = await dm.getProjects();
+    var projects = await dm.getProjects()
     expect(projects).to.include(samplesDummies.name)
   })
 
-  await it("Test setDataset", async()=>{
+  await it("Test setDataset", async () => {
     samplesDummies.name = "TestCypress4"
     await dm.setDataset(samplesDummies)
     var dataset = await dm.getDataset()
     expect(dataset.name).to.include(samplesDummies.name)
   })
 
-  await it("Test removeProject", async ()=>{
-    await dm.removeProject(nameProjectTest);
-    await dm.removeProject(nameProjectTest+"2");
-    await dm.removeProject(nameProjectTest+"3");
+  await it("Test removeProject", async () => {
+    await dm.removeProject(nameProjectTest)
+    await dm.removeProject(nameProjectTest + "2")
+    await dm.removeProject(nameProjectTest + "3")
     var projects = await dm.getProjects()
     expect(projects).to.not.include(nameProjectTest)
   })
