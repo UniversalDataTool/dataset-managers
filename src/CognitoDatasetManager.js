@@ -1,8 +1,7 @@
 import { EventEmitter } from "events"
 import Amplify, { Auth, Storage } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
-import getSampleNameFromUrl from "..\\..\\universal-data-tool\\src\\utils\\get-sample-name-from-url"
-const { from: seamless, set, merge, setIn } = seamlessImmutable
+const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
   type = "cognito"
@@ -46,6 +45,21 @@ class CognitoDatasetManager extends EventEmitter {
       })
     return this.worked
   }
+  /*fetchAFile = async (url) => {
+    var proxyUrl = "https://cors-anywhere.herokuapp.com/"
+    var response
+    if (url !== undefined)
+      response = await fetch(proxyUrl+ url, {
+        method: "GET",
+        headers: {
+          "X-Requested-With": "xmlhttprequest",
+        },
+      }).catch((error) => {
+        console.log("Looks like there was a problem: \n", error)
+      })
+    const blob = await response.blob()
+    return blob
+  }*/
 
   getSummary = async () => {
     if (!this.ds) {
@@ -66,33 +80,26 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   getProjects = async () => {
-    // should return a list of available projects to open
-    /*if (this.projects) {
-      return this.projects
-    } else {*/
-    this.projects = new Set()
-    await Storage.list("", { level: this.dataPrivacyLevel })
-      .then((result) => {
-        result.forEach((obj) => {
-          if (obj.size) {
-            let possibleProjects = obj.key.split("/")[0]
-            if (possibleProjects) this.projects.add(possibleProjects)
-          } else {
-            if (obj.key.split("/")[0] !== "") {
-              this.projects.add(obj.key.split("/")[0])
-            }
+    var list = await Storage.list("", { level: this.dataPrivacyLevel })
+    var projets =new Set()
+    
+    await Promise.all(
+      list.map(async (obj) => {
+        if (obj.size) {
+          let possibleProjects = obj.key.split("/")[0]
+          if (possibleProjects) projets.add(possibleProjects)
+        } else {
+          if (obj.key.split("/")[0] !== "") {
+            projets.add(obj.key.split("/")[0])
           }
-        })
+        }
       })
-      .catch((err) => {
-        this.projects = null
-      })
+    )
 
-    return this.projects
-    //}
+    return projets
   }
 
-  getDataListFromProject = async ({
+  /*getDataListFromProject = async ({
     projectName = false,
     noExtensions = false,
   }) => {
@@ -112,11 +119,10 @@ class CognitoDatasetManager extends EventEmitter {
       })
     }
     return samples
-  }
+  }*/
 
-  getAnnotationsListFromProject = async ({
+  getListSamples = async ({
     projectName = false,
-    noExtensions = false,
   }) => {
     if (!projectName) projectName = this.projectName
     var result=await Storage.list(`${projectName}/samples/`, {
@@ -125,11 +131,6 @@ class CognitoDatasetManager extends EventEmitter {
     let samples = result
       .filter((obj) => obj.key !== `${projectName}/samples/`)
       .map((obj) => obj.key)
-    if (noExtensions) {
-      samples = samples.map((eachFile) => {
-        return eachFile.replace(/\.[^.]+$/, "")
-      })
-    }
     return samples
   }
 
@@ -157,11 +158,11 @@ class CognitoDatasetManager extends EventEmitter {
       return false
     }
   }
-  readJSONAllSample = async (annotations) => {
-    var json = new Array(annotations.length)
+  readJSONAllSample = async (listSamples) => {
+    var json = new Array(listSamples.length)
     
-    for (var i = 0; i < annotations.length; i++) {
-      json[i] = await this.getJSON(annotations[i])
+    for (var i = 0; i < listSamples.length; i++) {
+      json[i] = await this.getJSON(listSamples[i])
     }
     return json
   }
@@ -171,7 +172,7 @@ class CognitoDatasetManager extends EventEmitter {
       level: this.dataPrivacyLevel,
       contentType: "application/json",
     })
-    var blob=await fetch(this.proxyUrl+url)
+    var blob=await fetch(url)
     var json =await blob.json()
     return json
   }
@@ -183,54 +184,60 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   getSamplesSummary = async () => {
-    const annotations = await this.getAnnotationsListFromProject({
+    const listSamples = await this.getListSamples({
       projectName: this.projectName,
       noExtensions: false,
     })
-    var json = await this.readJSONAllSample(annotations)
-    const samplesList = json.map((obj, i) => ({
+    var json = await this.readJSONAllSample(listSamples)
+    const listJson = json.map((obj) => ({
       hasAnnotation: obj.annotation ? true : false,
       _id: obj._id,
-      _url: annotations[i],
+      //TODO create fonction to get all url
+      _url: obj.imageUrl,
     }))
-    return samplesList
+    return listJson
   }
 
-  // Get or set the dataset training, file paths or other top levels keys (not
-  // samples). For example, getDatasetProperty('training') returns the labeler
-  // training configuration. getDatasetProperty('name') returns the name.
-  // You can and should create a new object here if you have custom stuff you
-  // want to store in the dataset
   getDatasetProperty = async (key) => {
     if (!this.ds) await this.getSummary()
     return this.ds[key]
   }
   setDatasetProperty = async (key, newValue) => {
-    this.ds = setIn(this.ds, [key], newValue)
     switch (key) {
       case "samples":
-        // TODO update the sample
-        await newValue.forEach(async (sample) => {
-          await this.setJSON(
-            this.projectName + "/samples/" + sample._id + ".json",
-            sample
-          )
-        })
+        await Promise.all(
+          newValue.map(async (obj) => {
+            await this.setJSON(
+              this.projectName + "/samples/" + obj._id + ".json",
+              obj
+            )
+          })
+        )
+        break
+      case "name":
+        var dataset = await this.getDataset()
+        dataset.name=newValue
+        /*var assets=await Promise.all(
+          summary.samples.map(async (obj) => {
+            return await this.fetchAFile(obj._url)
+          })
+        )*/
+        await this.removeProject(this.projectName),
+        await this.setDataset(dataset)
+        this.setProject(dataset.name)
         break
       default:
         var path = this.projectName + "/index.json"
         var jsonToChange = await this.getJSON(path)
-        jsonToChange.setIn(jsonToChange, key, newValue)
+        jsonToChange[key]= newValue
         await this.setJSON(path, jsonToChange)
         break
     }
-
-    //Promise<Object>
-
-    return {}
+    this.ds= undefined
+    await this.getSummary()
   }
 
-  getDataUrl = async (sampleRefId) => {
+  /*getDataUrl = async (sampleRefId) => {
     //changer sampleRefId pour avoir aussi l'extension de fichier
     const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
       expires: this.privateDataExpire,
@@ -240,128 +247,29 @@ class CognitoDatasetManager extends EventEmitter {
       .catch((err) => null)
 
     return url
-  }
+  }*/
 
-  getJsonAnnotation = async (sampleRefId) => {
-    let annotation = null
-    if (
-      this.ds.summary.samples.filter((sample) => sample._id === sampleRefId)[0]
-        .hasAnnotation
-    ) {
-      annotation = await Storage.get(
-        this.projectName + "/samples/" + sampleRefId + ".json",
-        {
-          expires: this.privateDataExpire,
-          level: this.dataPrivacyLevel,
-          download: true,
-        }
-      )
-        .then(async (data) => await new Response(data.Body).json())
-        .catch(() => null)
-    }
-    return annotation
-  }
-  getFileFromJson = async (json) => {
-    var fileName = getSampleNameFromUrl(json)
-    var url = await Storage.get(
-      this.proxyUrl + this.projectName + "/assets/" + fileName
-    )
-    var response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "X-Requested-With": "xmlhttprequest",
-      },
-    }).catch((error) => {
-      console.log("Looks like there was a problem: \n", error)
-    })
-    const blob = await response.blob()
-    return blob
-  }
-  // Two ways to get a sample. Using `sampleRefId` will return the sample with
-  // an `_id` === sampleRefId
   getSampleByIndex = async (index) => {
     const sampleRefId = this.ds.summary.samples[index]._id
     let sample = await this.getSample(sampleRefId)
     return sample
   }
   getSample = async (sampleRefId) => {
-    const fileExtension = sampleRefId.split(".").pop()
-
-    // handle images/audio/video data
-    const allowedImageExtensions = ["jpeg", "jpg", "png"]
-    if (allowedImageExtensions.includes(fileExtension.toLowerCase())) {
-      return {
-        imageUrl: await this.getDataUrl(sampleRefId),
-        annotation: await this.getJsonAnnotation(sampleRefId),
-      }
-    }
-
-    // handle audio
-    const allowedAudioExtensions = ["mp3", "wav"]
-    if (allowedAudioExtensions.includes(fileExtension.toLowerCase())) {
-      return {
-        audioUrl: await this.getDataUrl(sampleRefId),
-        annotation: await this.getJsonAnnotation(sampleRefId),
-      }
-    }
-
-    // handle video
-    const allowedVideoExtensions = ["mp4"]
-    if (allowedVideoExtensions.includes(fileExtension.toLowerCase())) {
-      return {
-        videoUrl: await this.getDataUrl(sampleRefId),
-        annotation: await this.getJsonAnnotation(sampleRefId),
-      }
-    }
-
-    // handle text data
-    const allowedTextExtensions = ["txt"]
-    if (allowedTextExtensions.includes(fileExtension.toLowerCase())) {
-      return {
-        textUrl: await this.getDataUrl(sampleRefId),
-        annotation: await this.getJsonAnnotation(sampleRefId),
-      }
-    }
-
-    // handle time series
-    const allowedTimeSeriesExtensions = ["csv"]
-    if (allowedTimeSeriesExtensions.includes(fileExtension.toLowerCase())) {
-      return {
-        csvUrl: await this.getDataUrl(sampleRefId),
-        annotation: await this.getJsonAnnotation(sampleRefId),
-      }
-    }
+    var json =await this.getJSON(this.projectName + "/samples/" + sampleRefId + ".json")
+    return json
   }
 
-  // Set a new value for a sample(File)
   setSample = async (sampleRefId, newSample) => {
-    //Promise<void>;
-<<<<<<< HEAD
-    await Storage.put(
-      sampleRefId
-        .replace(/\.[^.]+$/, ".json")
-        .replace("/data/", "/annotations/"),
-      newSample,
-      {
-        level: this.dataPrivacyLevel,
-        contentType: "application/json",
-=======
-    //bad code modify the json not the file ...
-    var summary = await this.getSummary()
-    await summary.samples.forEach(async (sample) => {
-      if (sample._id == sampleRefId) {
-        await this.setJSON(sample._url, newSample)
->>>>>>> 01f0e1c (bunch of test add)
-      }
-    ).then((response) => {
-      console.log(response)
-      return response
-    })
+    await this.setJSON(this.projectName+"/samples/"+sampleRefId+".json",newSample)
   }
 
-  // Add samples to the dataset
+  addFile = async (name, blob) => {
+    await Storage.put(this.projectName + "/assets/" + name, blob, {
+      level: this.dataPrivacyLevel,
+    }).catch((err) => console.log(err))
+  }
+
   addSamples = async (samples) => {
-    // Promise<void>;
     await Promise.all(
       samples.map(async (obj) => {
         await this.setJSON(
@@ -370,6 +278,7 @@ class CognitoDatasetManager extends EventEmitter {
         )
       })
     )
+    //Add assets
   }
   removeProject = async (projectName) => {
     var result = await Storage.list(projectName + "/", {
@@ -382,78 +291,53 @@ class CognitoDatasetManager extends EventEmitter {
         })
       })
     )
+    this.getProjects()
   }
-  // Remove samples
+
   removeSamples = async (sampleIds) => {
-    //Promise<void>;
     var result =await Storage.list(this.projectName+"/samples/",{
       level: this.dataPrivacyLevel,
     })
     await Promise.all(
       result.map(async (obj) => {
-        if(obj.key.includes("/"+sampleIds))
-          await Storage.remove(obj.key, {
-            level: this.dataPrivacyLevel,
-          })
+        for(var i = 0;i<sampleIds.length;i++)
+        {
+          if(obj.key.includes("/"+sampleIds[i]+".json")){
+            await Storage.remove(obj.key, {
+              level: this.dataPrivacyLevel,
+            })
+          }
+        }
       })
     )
   }
 
-  // Import an entire UDT JSON file
   setDataset = async (udtObject) => {
-    // Promise<void>;
-    // todo upload file annotated
-    var jsonSamples = udtObject.samples
-    await jsonSamples.forEach(async (json, i) => {
-      await this.setJSON(
-        this.projectName + "/samples/sample" + i + ".json",
-        json
-      )
-    })
-    delete udtObject["samples"]
-    var index = udtObject
-    this.setJSON(this.projectName + "/index.json", index)
-  }
+    var index = {name : udtObject.name, interface: udtObject.interface}
 
-  // Get full dataset JSON. Use sparingly if datasets are large.
-  getDataset = async () => {
-    //Promise<Object>;
-    var index = await this.getJSON(this.projectName + "/index.json")
-    var jsonSamples = await this.readJSONAllSample(
-      await this.getAnnotationsListFromProject(false, false)
+    var jsons=udtObject.samples
+    /*var assets=await Promise.all(
+      summary.samples.map(async (obj) => {
+        return await this.fetchAFile(obj._url)
+      })
+    )*/
+    this.setProject(udtObject.name)
+    await Promise.all(
+    [
+      await this.createProject(index),
+      await this.addSamples(jsons)
+      //await this.addFile()
+    ]
     )
-    index.samples = jsonSamples
-    return index
   }
 
-  // -------------------------------
-  // EVENTS
-  // You don't need to implement events, but they may help in collaborative
-  // settings or for displaying notifications.
-  // -------------------------------
+  getDataset = async () => {
+    var dataset = await this.getJSON(this.projectName+"/index.json")
 
-  on = (event) => {
-    // void;
+    dataset.samples=await this.readJSONAllSample(await this.getListSamples(false))
+
+    return dataset
   }
-
-  // -------------------------------
-  // OPTIONAL
-  // -------------------------------
-
-  // Called whenever application config is updated. Maybe you need the app config
-  // to access some authentication variables
-  // onUpdateAppConfig?: (appConfig) => void;
-
-  // Datasets can be explictly saved for some interfaces (e.g. FileSystem)
-  // explicitSave?: () => Promise<void>;
-
-  // Can be called to preload the contents of a sample to make for a more
-  // responsive interface
-  // preloadSampleByIndex?: (index: number) => void;
-  // preloadSample?: (sampleRefId: string) => void;
-
-  // We assume we can write to the dataset if not specified
-  // isWritable?: () => boolean;
 }
 
 export default CognitoDatasetManager
