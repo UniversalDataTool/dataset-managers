@@ -184,7 +184,7 @@ describe("Cognito Server Tests", async () => {
     expect(projects).to.include(samplesDummies.name)
   })
 
-  await it("Test setDataset", async () => {
+  await it("Test getDataset", async () => {
     samplesDummies.name = "TestCypress4"
     await dm.setDataset(samplesDummies)
     var dataset = await dm.getDataset()
