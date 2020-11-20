@@ -35,6 +35,8 @@ class CognitoDatasetManager extends EventEmitter {
 
     this.cognitoSetUp = Auth.signIn(user.username, user.password)
   }
+
+  //Made sure the cognitoSetUp is finish and working
   isReady = async () => {
     await this.cognitoSetUp
       .then(() => {
@@ -61,6 +63,7 @@ class CognitoDatasetManager extends EventEmitter {
     return blob
   }*/
 
+  //get the Summary of the current project
   getSummary = async () => {
     if (!this.ds) {
       var index = await this.getJSON(this.projectName + "/index.json")
@@ -79,6 +82,7 @@ class CognitoDatasetManager extends EventEmitter {
     return this.ds.summary
   }
 
+  //get the existing project in the deposit
   getProjects = async () => {
     var list = await Storage.list("", { level: this.dataPrivacyLevel })
     var projets = new Set()
@@ -121,6 +125,7 @@ class CognitoDatasetManager extends EventEmitter {
     return samples
   }*/
 
+  //List the existing samples in the folder samples of the selected project
   getListSamples = async ({ projectName = false }) => {
     if (!projectName) projectName = this.projectName
     var result = await Storage.list(`${projectName}/samples/`, {
@@ -132,11 +137,13 @@ class CognitoDatasetManager extends EventEmitter {
     return samples
   }
 
+  //Select a project
   setProject = (projectName) => {
     // This should be moved in a project manager later on
     this.projectName = projectName
   }
 
+  //create the folder of the project and store the index information (dataset first layer of information except samples)
   createProject = async (indexjson) => {
     // This should be moved in a project manager later on
     const projects = await this.getProjects()
@@ -152,6 +159,8 @@ class CognitoDatasetManager extends EventEmitter {
       return false
     }
   }
+
+  //Create an array with all the samples annotation json 
   readJSONAllSample = async (listSamples) => {
     var json = new Array(listSamples.length)
 
@@ -160,6 +169,8 @@ class CognitoDatasetManager extends EventEmitter {
     }
     return json
   }
+
+  //get a json regardless of what it contain
   getJSON = async (path) => {
     var url = await Storage.get(path, {
       expires: this.privateDataExpire,
@@ -171,12 +182,14 @@ class CognitoDatasetManager extends EventEmitter {
     return json
   }
 
+  //same as above but it set one
   setJSON = async (path, json) => {
     await Storage.put(path, json, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))
   }
 
+  //Load the sample json and verify if exist the annotation or just the other infos
   getSamplesSummary = async () => {
     const listSamples = await this.getListSamples({
       projectName: this.projectName,
@@ -192,10 +205,13 @@ class CognitoDatasetManager extends EventEmitter {
     return listJson
   }
 
+  //get a property from the summary
   getDatasetProperty = async (key) => {
     if (!this.ds) await this.getSummary()
     return this.ds[key]
   }
+
+  //set any property of the first layer of the json and force datasummary to reset
   setDatasetProperty = async (key, newValue) => {
     switch (key) {
       case "samples":
@@ -243,11 +259,18 @@ class CognitoDatasetManager extends EventEmitter {
     return url
   }*/
 
+
+  //IMPORTANT index = the index of the array of samples :::: id = the property _id in a sample of the array
+
+  //get sample by index (the index follows aphabetical order in AWS) 
+  //IMPORTANT It can not follow the original order of samples due to AWS ways of listing files 
   getSampleByIndex = async (index) => {
     const sampleRefId = this.ds.summary.samples[index]._id
     let sample = await this.getSample(sampleRefId)
     return sample
   }
+
+  //get sample by id 
   getSample = async (sampleRefId) => {
     var json = await this.getJSON(
       this.projectName + "/samples/" + sampleRefId + ".json"
@@ -255,6 +278,7 @@ class CognitoDatasetManager extends EventEmitter {
     return json
   }
 
+  //set sample by id
   setSample = async (sampleRefId, newSample) => {
     await this.setJSON(
       this.projectName + "/samples/" + sampleRefId + ".json",
@@ -262,12 +286,16 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
+  // This is working but currently not used 
+  // NOTE This function is really consumming so be careful
+  // Put a file copy in AWS 
   addFile = async (name, blob) => {
     await Storage.put(this.projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))
   }
 
+  //add a new samples to existing one or rewrite one already existing 
   addSamples = async (samples) => {
     await Promise.all(
       samples.map(async (obj) => {
@@ -279,6 +307,8 @@ class CognitoDatasetManager extends EventEmitter {
     )
     //Add assets
   }
+
+  //remove an entire projects and all related files
   removeProject = async (projectName) => {
     var result = await Storage.list(projectName + "/", {
       level: this.dataPrivacyLevel,
@@ -293,6 +323,7 @@ class CognitoDatasetManager extends EventEmitter {
     this.getProjects()
   }
 
+  // remove all samples specified by an array of ids
   removeSamples = async (sampleIds) => {
     var result = await Storage.list(this.projectName + "/samples/", {
       level: this.dataPrivacyLevel,
@@ -306,10 +337,13 @@ class CognitoDatasetManager extends EventEmitter {
             })
           }
         }
+        //remove the correponding file
       })
     )
   }
 
+  // set a new dataset by recreating the complete project
+  // NOTE Extremely High consumming
   setDataset = async (udtObject) => {
     var index = { name: udtObject.name, interface: udtObject.interface }
 
@@ -327,6 +361,7 @@ class CognitoDatasetManager extends EventEmitter {
     ])
   }
 
+  // get the complete dataset by loading all the json
   getDataset = async () => {
     var dataset = await this.getJSON(this.projectName + "/index.json")
 
