@@ -83,3 +83,5 @@ interface DatasetManager {
   // We assume we can write to the dataset if not specified
   isWritable?: () => boolean;
 }
+
+export default DatasetManager

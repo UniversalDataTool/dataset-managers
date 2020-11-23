@@ -9,13 +9,13 @@ export default () => {
       userPoolWebClientId: env.AWS_USER_POOL_WEB_CLIENT_ID,
       mandatorySignIn:
         (env.AWS_MANDATORY_SIGN_IN || "").toUpperCase() === "TRUE",
-      authenticationFlowType: env.AWS_AUTHENTICATION_FLOW_TYPE
+      authenticationFlowType: env.AWS_AUTHENTICATION_FLOW_TYPE,
     },
     Storage: {
       AWSS3: {
         bucket: env.AWS_STORAGE_BUCKET,
-        region: env.AWS_STORAGE_REGION
-      }
-    }
+        region: env.AWS_STORAGE_REGION,
+      },
+    },
   }
 }
