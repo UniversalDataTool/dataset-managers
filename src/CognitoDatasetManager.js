@@ -35,11 +35,13 @@ class CognitoDatasetManager extends EventEmitter {
 
   //Made sure the cognitoSetUp is finish and working
   isReady = async () => {
-    return await Auth.currentAuthenticatedUser().then(()=>{
-      return true
-    }).catch(()=>{
-      return false
-    })
+    return await Auth.currentAuthenticatedUser()
+      .then(() => {
+        return true
+      })
+      .catch(() => {
+        return false
+      })
   }
   /*fetchAFile = async (url) => {
     var proxyUrl = "https://cors-anywhere.herokuapp.com/"
@@ -154,7 +156,7 @@ class CognitoDatasetManager extends EventEmitter {
     }
   }
 
-  //Create an array with all the samples annotation json 
+  //Create an array with all the samples annotation json
   readJSONAllSample = async (listSamples) => {
     var json = new Array(listSamples.length)
 
@@ -253,18 +255,17 @@ class CognitoDatasetManager extends EventEmitter {
     return url
   }*/
 
-
   //IMPORTANT index = the index of the array of samples :::: id = the property _id in a sample of the array
 
-  //get sample by index (the index follows aphabetical order in AWS) 
-  //IMPORTANT It can not follow the original order of samples due to AWS ways of listing files 
+  //get sample by index (the index follows aphabetical order in AWS)
+  //IMPORTANT It can not follow the original order of samples due to AWS ways of listing files
   getSampleByIndex = async (index) => {
     const sampleRefId = this.ds.summary.samples[index]._id
     let sample = await this.getSample(sampleRefId)
     return sample
   }
 
-  //get sample by id 
+  //get sample by id
   getSample = async (sampleRefId) => {
     var json = await this.getJSON(
       this.projectName + "/samples/" + sampleRefId + ".json"
@@ -280,16 +281,16 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
-  // This is working but currently not used 
+  // This is working but currently not used
   // NOTE This function is really consumming so be careful
-  // Put a file copy in AWS 
+  // Put a file copy in AWS
   addFile = async (name, blob) => {
     await Storage.put(this.projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))
   }
 
-  //add a new samples to existing one or rewrite one already existing 
+  //add a new samples to existing one or rewrite one already existing
   addSamples = async (samples) => {
     await Promise.all(
       samples.map(async (obj) => {

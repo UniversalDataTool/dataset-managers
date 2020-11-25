@@ -49,13 +49,13 @@ const dummyUser = {
 }
 Cypress.config("defaultCommandTimeout", 100000)
 describe("Cognito Server Tests", () => {
-  var authConfig 
-  var dm 
-  var user 
-  before("prepare test",async() =>{
-    authConfig =getAuthConfig()
-    dm =await new CognitoDatasetManager({ authConfig})
-    user =await Auth.signIn(dummyUser.username, dummyUser.password)
+  var authConfig
+  var dm
+  var user
+  before("prepare test", async () => {
+    authConfig = getAuthConfig()
+    dm = await new CognitoDatasetManager({ authConfig })
+    user = await Auth.signIn(dummyUser.username, dummyUser.password)
   })
   it("Create the CognitoDatasetManager object", async () => {
     var ready = await dm.isReady()
@@ -63,19 +63,16 @@ describe("Cognito Server Tests", () => {
     await Auth.signOut()
     ready = await dm.isReady()
     expect(ready).to.equal(false)
-    user =await Auth.signIn(dummyUser.username, dummyUser.password)
+    user = await Auth.signIn(dummyUser.username, dummyUser.password)
   })
 
-  it(
-    "Made sure project " + nameProjectTest + " don't exist",
-    async () => {
-      await dm.removeProject(nameProjectTest)
-      var projects = await dm.getProjects()
-      expect(projects).to.not.include(nameProjectTest)
-    }
-  )
+  it("Made sure project " + nameProjectTest + " don't exist", async () => {
+    await dm.removeProject(nameProjectTest)
+    var projects = await dm.getProjects()
+    expect(projects).to.not.include(nameProjectTest)
+  })
 
-   it("Test create project", async () => {
+  it("Test create project", async () => {
     var index = {
       name: samplesDummies.name,
       interface: samplesDummies.interface,
