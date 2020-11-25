@@ -1,5 +1,5 @@
 import { EventEmitter } from "events"
-import Amplify, { Auth, Storage } from "aws-amplify"
+import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
 const { from: seamless } = seamlessImmutable
 
@@ -9,7 +9,6 @@ class CognitoDatasetManager extends EventEmitter {
   proxyUrl = "https://cors-anywhere.herokuapp.com/"
   constructor({
     authConfig,
-    user,
     dataPrivacyLevel = "private",
     privateDataExpire = 24 * 60 * 60,
   } = {}) {
@@ -32,20 +31,15 @@ class CognitoDatasetManager extends EventEmitter {
     this.dataPrivacyLevel = dataPrivacyLevel
 
     Amplify.configure(this.authConfig)
-
-    this.cognitoSetUp = Auth.signIn(user.username, user.password)
   }
 
   //Made sure the cognitoSetUp is finish and working
   isReady = async () => {
-    await this.cognitoSetUp
-      .then(() => {
-        this.worked = true
-      })
-      .catch(() => {
-        this.worked = false
-      })
-    return this.worked
+    return await Auth.currentAuthenticatedUser().then(()=>{
+      return true
+    }).catch(()=>{
+      return false
+    })
   }
   /*fetchAFile = async (url) => {
     var proxyUrl = "https://cors-anywhere.herokuapp.com/"

@@ -1,5 +1,6 @@
 import CognitoDatasetManager from "../../../dist/CognitoDatasetManager.js"
 import getAuthConfig from "./get-auth-config.js"
+import { Auth } from "aws-amplify"
 var samplesDummies = {
   name: "TestCypress",
   interface: {
@@ -46,17 +47,26 @@ const dummyUser = {
   username: Cypress.env().COGNITO_USER_NAME,
   password: Cypress.env().COGNITO_USER_PASS,
 }
-Cypress.config("defaultCommandTimeout", 50000)
-describe("Cognito Server Tests", async () => {
-  const authConfig = getAuthConfig()
-  const dm = await new CognitoDatasetManager({ authConfig, user: dummyUser })
-
-  await it("Create the CognitoDatasetManager object", async () => {
+Cypress.config("defaultCommandTimeout", 100000)
+describe("Cognito Server Tests", () => {
+  var authConfig 
+  var dm 
+  var user 
+  before("prepare test",async() =>{
+    authConfig =getAuthConfig()
+    dm =await new CognitoDatasetManager({ authConfig})
+    user =await Auth.signIn(dummyUser.username, dummyUser.password)
+  })
+  it("Create the CognitoDatasetManager object", async () => {
     var ready = await dm.isReady()
     expect(ready).to.equal(true)
+    await Auth.signOut()
+    ready = await dm.isReady()
+    expect(ready).to.equal(false)
+    user =await Auth.signIn(dummyUser.username, dummyUser.password)
   })
 
-  await it(
+  it(
     "Made sure project " + nameProjectTest + " don't exist",
     async () => {
       await dm.removeProject(nameProjectTest)
@@ -65,7 +75,7 @@ describe("Cognito Server Tests", async () => {
     }
   )
 
-  await it("Test create project", async () => {
+   it("Test create project", async () => {
     var index = {
       name: samplesDummies.name,
       interface: samplesDummies.interface,
@@ -75,17 +85,17 @@ describe("Cognito Server Tests", async () => {
     expect(projects).to.include(nameProjectTest)
   })
 
-  await it("Test setProject", async () => {
+  it("Test setProject", async () => {
     dm.setProject(nameProjectTest)
     expect(dm.projectName).to.equal(nameProjectTest)
   })
 
-  await it("Made sure no sample exist", async () => {
+  it("Made sure no sample exist", async () => {
     var sampleList = await dm.getListSamples(false)
     expect(sampleList.length).to.equal(0)
   })
 
-  await it("Test addSamples", async () => {
+  it("Test addSamples", async () => {
     await dm.addSamples(samplesDummies.samples)
     var annotationsList = await dm.getListSamples(false)
     expect(annotationsList.length).to.equal(2)
@@ -102,19 +112,19 @@ describe("Cognito Server Tests", async () => {
     expect(datalist.length).to.equal(1)
   })*/
 
-  await it("Test readJSONAllSmple", async () => {
+  it("Test readJSONAllSmple", async () => {
     var json = await dm.readJSONAllSample(await dm.getListSamples(false))
     expect(json.length).to.equal(samplesDummies.samples.length)
   })
 
-  await it("Test getJSON", async () => {
+  it("Test getJSON", async () => {
     var json = await dm.getJSON(
       nameProjectTest + "/samples/" + samplesDummies.samples[0]._id + ".json"
     )
     expect(json._id).to.equal(samplesDummies.samples[0]._id)
   })
 
-  await it("Test setJSON", async () => {
+  it("Test setJSON", async () => {
     await dm.setJSON(
       nameProjectTest + "/samples/" + samplesDummies.samples[0]._id + ".json",
       samplesDummies.samples[1]
@@ -125,22 +135,22 @@ describe("Cognito Server Tests", async () => {
     expect(json._id).to.equal(samplesDummies.samples[1]._id)
   })
 
-  await it("Test getSamplesSummary", async () => {
+  it("Test getSamplesSummary", async () => {
     var samplesSummary = await dm.getSamplesSummary()
     expect(samplesSummary[1].hasAnnotation).to.equal(false)
   })
 
-  await it("Test getSummary", async () => {
+  it("Test getSummary", async () => {
     var summary = await dm.getSummary()
     expect(summary.samples[1].hasAnnotation).to.equal(false)
   })
 
-  await it("Test getDatasetProperty", async () => {
+  it("Test getDatasetProperty", async () => {
     var datasetProperty = await dm.getDatasetProperty("name")
     expect(datasetProperty).to.equal(samplesDummies.name)
   })
 
-  await it("Test setDatasetProperty", async () => {
+  it("Test setDatasetProperty", async () => {
     await dm.setDatasetProperty("samples", samplesDummies.samples)
     var summary = await dm.getSummary()
     expect(summary.samples[1].hasAnnotation).to.equal(true)
@@ -155,43 +165,43 @@ describe("Cognito Server Tests", async () => {
     expect(value.type).to.equal(undefined)
   })
 
-  await it("Test getSampleByIndex", async () => {
+  it("Test getSampleByIndex", async () => {
     var sample = await dm.getSampleByIndex(0)
     expect(samplesDummies.samples[1]._id).to.include(sample._id)
   })
 
-  await it("Test getSample", async () => {
+  it("Test getSample", async () => {
     var sample = await dm.getSample("shcscmhiv")
     expect(sample._id).to.equal("shcscmhiv")
   })
 
-  await it("Test setSample", async () => {
+  it("Test setSample", async () => {
     await dm.setSample("adfaef", {})
     var annotation = await dm.getListSamples(nameProjectTest)
     expect(annotation.length).to.equal(3)
   })
 
-  await it("Test removeSamples", async () => {
+  it("Test removeSamples", async () => {
     await dm.removeSamples(["adfaef"])
     var list = await dm.getListSamples(false, false)
     expect(list.length).to.equal(2)
   })
 
-  await it("Test setDataset", async () => {
+  it("Test setDataset", async () => {
     samplesDummies.name = "TestCypress3"
     await dm.setDataset(samplesDummies)
     var projects = await dm.getProjects()
     expect(projects).to.include(samplesDummies.name)
   })
 
-  await it("Test getDataset", async () => {
+  it("Test getDataset", async () => {
     samplesDummies.name = "TestCypress4"
     await dm.setDataset(samplesDummies)
     var dataset = await dm.getDataset()
     expect(dataset.name).to.include(samplesDummies.name)
   })
 
-  await it("Test removeProject", async () => {
+  it("Test removeProject", async () => {
     await dm.removeProject(nameProjectTest)
     await dm.removeProject(nameProjectTest + "2")
     await dm.removeProject(nameProjectTest + "3")
