@@ -82,6 +82,9 @@ interface DatasetManager {
 
   // We assume we can write to the dataset if not specified
   isWritable?: () => boolean;
+  
+  // If this is undefined, it's assumed the dataset manager doesn't support uploading
+  uploadFiles?: (files: Array<{ data: Buffer, destinationUrl: string }>) => Promise<{ uploadUrl: string }>
 }
 
 export default DatasetManager
