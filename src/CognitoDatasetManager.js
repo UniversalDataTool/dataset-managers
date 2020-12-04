@@ -176,7 +176,6 @@ class CognitoDatasetManager extends EventEmitter {
             })
           }
         }
-        //remove the correponding file
       })
     )
   }
@@ -233,9 +232,22 @@ class CognitoDatasetManager extends EventEmitter {
     )
     return projets
   }
+  // remove the samples folder
+  removeSamplesFolder = async (projectName) => {
+    var result = await Storage.list(projectName + "/samples/", {
+      level: this.dataPrivacyLevel,
+    })
+    await Promise.all(
+      result.map(async (obj) => {
+        await Storage.remove(obj.key, {
+          level: this.dataPrivacyLevel,
+        })
+      })
+    )
+  }
 
   // remove the assets folder
-  removeAssets = async (projectName) => {
+  removeAssetsFolder = async (projectName) => {
     var result = await Storage.list(projectName + "/assets/", {
       level: this.dataPrivacyLevel,
     })
