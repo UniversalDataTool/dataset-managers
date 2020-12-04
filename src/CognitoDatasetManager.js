@@ -233,7 +233,19 @@ class CognitoDatasetManager extends EventEmitter {
     )
     return projets
   }
-
+  // remove the samples folder
+  removeSamples = async (projectName) => {
+    var result = await Storage.list(projectName + "/samples/", {
+      level: this.dataPrivacyLevel,
+    })
+    await Promise.all(
+      result.map(async (obj) => {
+        await Storage.remove(obj.key, {
+          level: this.dataPrivacyLevel,
+        })
+      })
+    )
+  }
   // These function are exclusive to this dataset ------------------------------------------------------------------------------------------------------
 
   //Load the sample json and verify if exist the annotation or just the other infos
