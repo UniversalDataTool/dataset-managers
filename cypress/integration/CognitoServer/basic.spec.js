@@ -143,7 +143,6 @@ describe("Cognito Server Tests", () => {
   it("Test removeSamples", async () => {
     await dm.removeSamples(["adfaef"])
     var list = await dm.getListSamples(false, false)
-    console.log(list)
     expect(list.length).to.equal(2)
   })
 
@@ -170,6 +169,10 @@ describe("Cognito Server Tests", () => {
     await dm.addAsset("chat.jpg", catPicture)
     var list = await dm.getListAssets(samplesDummies.name)
     expect(list.length).to.equal(1)
+  })
+  it("get asset Url", async () => {
+    var url = await dm.getAssetUrl("chat.jpg")
+    expect(url.includes("chat.jpg")).to.equal(true)
   })
   it("Remove Folder Assets", async () => {
     await dm.removeAssetsFolder(samplesDummies.name)

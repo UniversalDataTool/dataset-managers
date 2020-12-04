@@ -2,6 +2,7 @@ import { EventEmitter } from "events"
 import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
 import getUrlFromJson from "./utils/get-url-from-json"
+import isAWSUrl from "./utils/is-aws-url"
 const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
@@ -278,16 +279,10 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   getAssetUrl = async (sampleRefId) => {
-    //changer sampleRefId pour avoir aussi l'extension de fichier
-    const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
-      expires: this.privateDataExpire,
-      level: this.dataPrivacyLevel,
-    }).then((_url) => _url)
-
-    return url
+    return this.getAssetUrl(sampleRefId, this.projectName)
   }
 
-  getAssetUrl = async (sampleRefId,projectName) => {
+  getAssetUrl = async (sampleRefId, projectName) => {
     //changer sampleRefId pour avoir aussi l'extension de fichier
     const url = await Storage.get(projectName + "/assets/" + sampleRefId, {
       expires: this.privateDataExpire,
