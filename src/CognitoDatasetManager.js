@@ -277,7 +277,7 @@ class CognitoDatasetManager extends EventEmitter {
     return listJson
   }
 
-  getDataUrl = async (sampleRefId) => {
+  getAssetUrl = async (sampleRefId) => {
     //changer sampleRefId pour avoir aussi l'extension de fichier
     const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
       expires: this.privateDataExpire,
@@ -341,10 +341,9 @@ class CognitoDatasetManager extends EventEmitter {
     }).catch((err) => console.log(err))
   }
 
-  // This is working but currently not used
   // NOTE This function is really consumming so be careful
-  // Put a file copy in AWS
-  addFile = async (name, blob) => {
+  // Put a asset copy in AWS
+  addAsset = async (name, blob) => {
     await Storage.put(this.projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))

@@ -166,8 +166,8 @@ describe("Cognito Server Tests", () => {
     var list = await dm.getListSamples(samplesDummies.name)
     expect(list.length).to.equal(0)
   })
-  it("Add file ", async () => {
-    await dm.addFile("chat.jpg", catPicture)
+  it("Add asset ", async () => {
+    await dm.addAsset("chat.jpg", catPicture)
     var list = await dm.getListAssets(samplesDummies.name)
     expect(list.length).to.equal(1)
   })
