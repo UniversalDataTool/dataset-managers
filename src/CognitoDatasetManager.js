@@ -1,6 +1,7 @@
 import { EventEmitter } from "events"
 import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
+import getUrlFromJson from "./utils/get-url-from-json"
 const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
@@ -43,21 +44,6 @@ class CognitoDatasetManager extends EventEmitter {
         return false
       })
   }
-  /*fetchAFile = async (url) => {
-    var proxyUrl = "https://cors-anywhere.herokuapp.com/"
-    var response
-    if (url !== undefined)
-      response = await fetch(proxyUrl+ url, {
-        method: "GET",
-        headers: {
-          "X-Requested-With": "xmlhttprequest",
-        },
-      }).catch((error) => {
-        console.log("Looks like there was a problem: \n", error)
-      })
-    const blob = await response.blob()
-    return blob
-  }*/
 
   //get the Summary of the current project
   getSummary = async () => {
@@ -76,118 +62,6 @@ class CognitoDatasetManager extends EventEmitter {
       }
     }
     return this.ds.summary
-  }
-
-  //get the existing project in the deposit
-  getProjects = async () => {
-    var list = await Storage.list("", { level: this.dataPrivacyLevel })
-    var projets = new Set()
-
-    await Promise.all(
-      list.map(async (obj) => {
-        if (obj.size) {
-          let possibleProjects = obj.key.split("/")[0]
-          if (possibleProjects) projets.add(possibleProjects)
-        } else {
-          if (obj.key.split("/")[0] !== "") {
-            projets.add(obj.key.split("/")[0])
-          }
-        }
-      })
-    )
-    return projets
-  }
-
-  getListAssets = async ({ projectName = false }) => {
-    if (!projectName) projectName = this.projectName
-    var result = await Storage.list(`${projectName}/assets/`, {
-      level: this.dataPrivacyLevel,
-    })
-
-    let assets = result
-      .filter((obj) => obj.key !== `${projectName}/assets/`)
-      .map((obj) => obj.key)
-    return assets
-  }
-
-  //List the existing samples in the folder samples of the selected project
-  getListSamples = async ({ projectName = false }) => {
-    if (!projectName) projectName = this.projectName
-    var result = await Storage.list(`${projectName}/samples/`, {
-      level: this.dataPrivacyLevel,
-    })
-    let samples = result
-      .filter((obj) => obj.key !== `${projectName}/samples/`)
-      .map((obj) => obj.key)
-    return samples
-  }
-
-  //Select a project
-  setProject = (projectName) => {
-    // This should be moved in a project manager later on
-    this.projectName = projectName
-  }
-
-  //create the folder of the project and store the index information (dataset first layer of information except samples)
-  createProject = async (indexjson) => {
-    // This should be moved in a project manager later on
-    const projects = await this.getProjects()
-
-    if (projects && !projects.has(indexjson.name)) {
-      await Storage.put(`${indexjson.name}/index.json`, indexjson, {
-        level: this.dataPrivacyLevel,
-        contentType: "application/json",
-      })
-      return true
-    } else {
-      console.log("Project with the same name already exist")
-      return false
-    }
-  }
-
-  //Create an array with all the samples annotation json
-  readJSONAllSample = async (listSamples) => {
-    var json = new Array(listSamples.length)
-
-    for (var i = 0; i < listSamples.length; i++) {
-      json[i] = await this.getJSON(listSamples[i])
-    }
-    return json
-  }
-
-  //get a json regardless of what it contain
-  getJSON = async (path) => {
-    var url = await Storage.get(path, {
-      expires: this.privateDataExpire,
-      level: this.dataPrivacyLevel,
-      contentType: "application/json",
-    })
-    var blob = await fetch(url)
-    var json = await blob.json()
-    return json
-  }
-
-  //same as above but it set one
-  setJSON = async (path, json) => {
-    await Storage.put(path, json, {
-      level: this.dataPrivacyLevel,
-    }).catch((err) => console.log(err))
-  }
-
-  //Load the sample json and verify if exist the annotation or just the other infos
-  getSamplesSummary = async () => {
-    const listSamples = await this.getListSamples({
-      projectName: this.projectName,
-      noExtensions: false,
-    })
-    var json = await this.readJSONAllSample(listSamples)
-    const listJson = json.map((obj) => ({
-      hasAnnotation: obj.annotation ? true : false,
-      _id: obj._id,
-      //TODO create fonction to get all url
-      _url: obj.imageUrl,
-    }))
-    return listJson
   }
 
   //get a property from the summary
@@ -212,11 +86,6 @@ class CognitoDatasetManager extends EventEmitter {
       case "name":
         var dataset = await this.getDataset()
         dataset.name = newValue
-        /*var assets=await Promise.all(
-          summary.samples.map(async (obj) => {
-            return await this.fetchAFile(obj._url)
-          })
-        )*/
         await this.removeProject(this.projectName),
           await this.setDataset(dataset)
         this.setProject(dataset.name)
@@ -229,19 +98,30 @@ class CognitoDatasetManager extends EventEmitter {
         break
     }
     this.ds = undefined
-    await this.getSummary()
   }
 
-  getDataUrl = async (sampleRefId) => {
-    //changer sampleRefId pour avoir aussi l'extension de fichier
-    const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
-      expires: this.privateDataExpire,
-      level: this.dataPrivacyLevel,
-    })
-      .then((_url) => _url)
-      .catch(() => null)
+  // set a new dataset by recreating the complete project
+  // NOTE Extremely High consumming
+  setDataset = async (udtObject) => {
+    var index = { name: udtObject.name, interface: udtObject.interface }
+    var jsons = udtObject.samples
 
-    return url
+    this.setProject(udtObject.name)
+    await Promise.all([
+      await this.setJSON(udtObject.name + "/index.json", index),
+      await this.addSamples(jsons),
+    ])
+  }
+
+  // get the complete dataset by loading all the json
+  getDataset = async () => {
+    var dataset = await this.getJSON(this.projectName + "/index.json")
+
+    dataset.samples = await this.readJSONAllSamples(
+      await this.getListSamples(false)
+    )
+
+    return dataset
   }
 
   //IMPORTANT index = the index of the array of samples :::: id = the property _id in a sample of the array
@@ -270,16 +150,7 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
-  // This is working but currently not used
-  // NOTE This function is really consumming so be careful
-  // Put a file copy in AWS
-  addFile = async (name, blob) => {
-    await Storage.put(this.projectName + "/assets/" + name, blob, {
-      level: this.dataPrivacyLevel,
-    }).catch((err) => console.log(err))
-  }
-
-  //add a new samples to existing one or rewrite one already existing
+  //add new samples to existing one or rewrite one already existing
   addSamples = async (samples) => {
     await Promise.all(
       samples.map(async (obj) => {
@@ -289,22 +160,6 @@ class CognitoDatasetManager extends EventEmitter {
         )
       })
     )
-    //Add assets
-  }
-
-  //remove an entire projects and all related files
-  removeProject = async (projectName) => {
-    var result = await Storage.list(projectName + "/", {
-      level: this.dataPrivacyLevel,
-    })
-    await Promise.all(
-      result.map(async (obj) => {
-        await Storage.remove(obj.key, {
-          level: this.dataPrivacyLevel,
-        })
-      })
-    )
-    this.getProjects()
   }
 
   // remove all samples specified by an array of ids
@@ -326,34 +181,147 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
-  // set a new dataset by recreating the complete project
-  // NOTE Extremely High consumming
-  setDataset = async (udtObject) => {
-    var index = { name: udtObject.name, interface: udtObject.interface }
+  // To Extract to a project manager ----------------------------------------------------------------------------------------------
 
-    var jsons = udtObject.samples
-    /*var assets=await Promise.all(
-      summary.samples.map(async (obj) => {
-        return await this.fetchAFile(obj._url)
+  //remove an entire projects and all related files
+  removeProject = async (projectName) => {
+    var result = await Storage.list(projectName + "/", {
+      level: this.dataPrivacyLevel,
+    })
+    await Promise.all(
+      result.map(async (obj) => {
+        await Storage.remove(obj.key, {
+          level: this.dataPrivacyLevel,
+        })
       })
-    )*/
-    this.setProject(udtObject.name)
-    await Promise.all([
-      await this.createProject(index),
-      await this.addSamples(jsons),
-      //await this.addFile()
-    ])
+    )
   }
 
-  // get the complete dataset by loading all the json
-  getDataset = async () => {
-    var dataset = await this.getJSON(this.projectName + "/index.json")
+  //create the folder of the project and store the index information (dataset first layer of information except samples)
+  createProject = async (indexjson) => {
+    this.removeProject(indexjson.name)
+    // This should be moved in a project manager later on
+    return await Storage.put(`${indexjson.name}/index.json`, indexjson, {
+      level: this.dataPrivacyLevel,
+      contentType: "application/json",
+    })
+      .then(() => true)
+      .catch(() => false)
+  }
+  //Select a project
+  setProject = (projectName) => {
+    // This should be moved in a project manager later on
+    this.projectName = projectName
+  }
 
-    dataset.samples = await this.readJSONAllSample(
-      await this.getListSamples(false)
+  //get the existing project in the deposit
+  getProjects = async () => {
+    var list = await Storage.list("", { level: this.dataPrivacyLevel })
+    var projets = new Set()
+
+    await Promise.all(
+      list.map(async (obj) => {
+        if (obj.size) {
+          let possibleProjects = obj.key.split("/")[0]
+          if (possibleProjects) projets.add(possibleProjects)
+        } else {
+          if (obj.key.split("/")[0] !== "") {
+            projets.add(obj.key.split("/")[0])
+          }
+        }
+      })
     )
+    return projets
+  }
 
-    return dataset
+  // These function are exclusive to this dataset ------------------------------------------------------------------------------------------------------
+
+  //Load the sample json and verify if exist the annotation or just the other infos
+  getSamplesSummary = async () => {
+    const listSamples = await this.getListSamples({
+      projectName: this.projectName,
+      noExtensions: false,
+    })
+    var json = await this.readJSONAllSamples(listSamples)
+    const listJson = json.map((obj) => ({
+      hasAnnotation: obj.annotation ? true : false,
+      _id: obj._id,
+      _url: getUrlFromJson(obj),
+    }))
+    return listJson
+  }
+
+  getDataUrl = async (sampleRefId) => {
+    //changer sampleRefId pour avoir aussi l'extension de fichier
+    const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
+      expires: this.privateDataExpire,
+      level: this.dataPrivacyLevel,
+    }).then((_url) => _url)
+
+    return url
+  }
+
+  //get the list of existing assets
+  getListAssets = async ({ projectName = false }) => {
+    if (!projectName) projectName = this.projectName
+    var result = await Storage.list(`${projectName}/assets/`, {
+      level: this.dataPrivacyLevel,
+    })
+
+    let assets = result
+      .filter((obj) => obj.key !== `${projectName}/assets/`)
+      .map((obj) => obj.key)
+    return assets
+  }
+
+  //List the existing samples in the folder samples of the selected project
+  getListSamples = async ({ projectName = false }) => {
+    if (!projectName) projectName = this.projectName
+    var result = await Storage.list(`${projectName}/samples/`, {
+      level: this.dataPrivacyLevel,
+    })
+    let samples = result
+      .filter((obj) => obj.key !== `${projectName}/samples/`)
+      .map((obj) => obj.key)
+    return samples
+  }
+
+  //Create an array with all the samples annotation json
+  readJSONAllSamples = async (listSamples) => {
+    var json = new Array(listSamples.length)
+
+    for (var i = 0; i < listSamples.length; i++) {
+      json[i] = await this.getJSON(listSamples[i])
+    }
+    return json
+  }
+
+  //get a json regardless of what it contain
+  getJSON = async (path) => {
+    var url = await Storage.get(path, {
+      expires: this.privateDataExpire,
+      level: this.dataPrivacyLevel,
+      contentType: "application/json",
+    })
+    var blob = await fetch(url).catch((err) => console.log(err))
+    var json = await blob.json()
+    return json
+  }
+
+  //same as above but it set one
+  setJSON = async (path, json) => {
+    await Storage.put(path, json, {
+      level: this.dataPrivacyLevel,
+    }).catch((err) => console.log(err))
+  }
+
+  // This is working but currently not used
+  // NOTE This function is really consumming so be careful
+  // Put a file copy in AWS
+  addFile = async (name, blob) => {
+    await Storage.put(this.projectName + "/assets/" + name, blob, {
+      level: this.dataPrivacyLevel,
+    }).catch((err) => console.log(err))
   }
 }
 

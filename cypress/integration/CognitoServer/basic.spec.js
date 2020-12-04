@@ -102,19 +102,8 @@ describe("Cognito Server Tests", () => {
     expect(annotationsList.length).to.equal(2)
   })
 
-  /*await it("Test addFile", async () => {
-    var blob1 = await dm.fetchAFile(samplesDummies.samples[0].imageUrl)
-    console.log("blob1")
-    await dm.addFile(
-      "00dd1479a5_108485_chat-domestique.jpg",
-      blob1
-    )
-    var datalist = await dm.getDataListFromProject(false, false)
-    expect(datalist.length).to.equal(1)
-  })*/
-
   it("Test readJSONAllSmple", async () => {
-    var json = await dm.readJSONAllSample(await dm.getListSamples(false))
+    var json = await dm.readJSONAllSamples(await dm.getListSamples(false))
     expect(json.length).to.equal(samplesDummies.samples.length)
   })
 
