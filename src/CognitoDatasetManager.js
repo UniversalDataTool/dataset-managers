@@ -287,6 +287,16 @@ class CognitoDatasetManager extends EventEmitter {
     return url
   }
 
+  getAssetUrl = async (sampleRefId,projectName) => {
+    //changer sampleRefId pour avoir aussi l'extension de fichier
+    const url = await Storage.get(projectName + "/assets/" + sampleRefId, {
+      expires: this.privateDataExpire,
+      level: this.dataPrivacyLevel,
+    }).then((_url) => _url)
+
+    return url
+  }
+
   //get the list of existing assets
   getListAssets = async ({ projectName = false }) => {
     if (!projectName) projectName = this.projectName
