@@ -95,31 +95,20 @@ class CognitoDatasetManager extends EventEmitter {
         }
       })
     )
-
     return projets
   }
 
-  /*getDataListFromProject = async ({
-    projectName = false,
-    noExtensions = false,
-  }) => {
+  getListAssets = async ({ projectName = false }) => {
     if (!projectName) projectName = this.projectName
-
-    let samples = []
-    await Storage.list(`${projectName}/assets/`, {
+    var result = await Storage.list(`${projectName}/assets/`, {
       level: this.dataPrivacyLevel,
-    }).then((result) => {
-      samples = result
-        .filter((obj) => obj.key !== `${projectName}/data/`)
-        .map((obj) => obj.key)
     })
-    if (noExtensions) {
-      samples = samples.map((eachFile) => {
-        return eachFile.replace(/\.[^.]+$/, "")
-      })
-    }
-    return samples
-  }*/
+
+    let assets = result
+      .filter((obj) => obj.key !== `${projectName}/assets/`)
+      .map((obj) => obj.key)
+    return assets
+  }
 
   //List the existing samples in the folder samples of the selected project
   getListSamples = async ({ projectName = false }) => {
@@ -243,17 +232,17 @@ class CognitoDatasetManager extends EventEmitter {
     await this.getSummary()
   }
 
-  /*getDataUrl = async (sampleRefId) => {
+  getDataUrl = async (sampleRefId) => {
     //changer sampleRefId pour avoir aussi l'extension de fichier
     const url = await Storage.get(this.projectName + "/assets/" + sampleRefId, {
       expires: this.privateDataExpire,
       level: this.dataPrivacyLevel,
     })
       .then((_url) => _url)
-      .catch((err) => null)
+      .catch(() => null)
 
     return url
-  }*/
+  }
 
   //IMPORTANT index = the index of the array of samples :::: id = the property _id in a sample of the array
 
