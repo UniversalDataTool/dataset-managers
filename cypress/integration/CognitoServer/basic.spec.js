@@ -91,6 +91,10 @@ describe("Cognito Server Tests", () => {
     var sampleList = await dm.getListSamples(false)
     expect(sampleList.length).to.equal(0)
   })
+  it("Made sure no asset exist", async () => {
+    var sampleList = await dm.getListAssets(false)
+    expect(sampleList.length).to.equal(0)
+  })
 
   it("Test addSamples", async () => {
     await dm.addSamples(samplesDummies.samples)
