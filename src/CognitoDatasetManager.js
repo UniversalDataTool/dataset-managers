@@ -2,7 +2,7 @@ import { EventEmitter } from "events"
 import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
 import getUrlFromJson from "./utils/get-url-from-json"
-import isAWSUrl from "./utils/is-aws-url"
+import isEmpty from "lodash/isEmpty"
 const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
@@ -352,6 +352,54 @@ class CognitoDatasetManager extends EventEmitter {
     await Storage.put(this.projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))
+  }
+
+  //function for json management -----------------------------------------------------------------------------------------------
+  getSampleName = (sample) => {
+    var sampleName
+    if (!isEmpty(sample.sampleName)) {
+      sampleName = sample.sampleName
+    } else {
+      sampleName = this.getSampleNameFromURL(sample)[1]
+    }
+    return sampleName
+  }
+
+  getSampleUrl = (sample) => {
+    return (
+      sample.imageUrl ||
+      sample.videoUrl ||
+      sample.audioUrl ||
+      sample.pdfUrl ||
+      undefined
+    )
+  }
+
+  getSampleNameFromURL = (sample) => {
+    var sampleName
+    if (!isEmpty(sample)) {
+      if (!isEmpty(sample.imageUrl)) {
+        sampleName = decodeURI(sample.imageUrl).match(
+          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
+        )
+      }
+      if (!isEmpty(sample.videoUrl)) {
+        sampleName = decodeURI(sample.videoUrl).match(
+          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
+        )
+      }
+      if (!isEmpty(sample.audioUrl)) {
+        sampleName = decodeURI(sample.audioUrl).match(
+          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
+        )
+      }
+      if (!isEmpty(sample.pdfUrl)) {
+        sampleName = decodeURI(sample.pdfUrl).match(
+          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
+        )
+      }
+    }
+    return sampleName
   }
 }
 

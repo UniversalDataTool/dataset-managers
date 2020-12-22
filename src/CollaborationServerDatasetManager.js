@@ -57,7 +57,6 @@ class CollaborativeDatasetManager extends EventEmitter {
 
   loadSession = async (sessionId) => {
     this.sessionId = sessionId
-    console.log(`joining session "${this.sessionId}"`)
     await this.getSummary()
     clearTimeout(this.diffPollingTimeout)
     this.diffPollingTimeout = setTimeout(this.pollDiffs, this.pollingInterval)
