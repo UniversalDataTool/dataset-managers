@@ -1,6 +1,7 @@
 import { EventEmitter } from "events"
 import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
+import { setIn } from "seamless-immutable"
 import getUrlFromJson from "./utils/get-url-from-json"
 import isEmpty from "lodash/isEmpty"
 const { from: seamless } = seamlessImmutable
@@ -365,6 +366,47 @@ class CognitoDatasetManager extends EventEmitter {
     return sampleName
   }
 
+  addNamesToSamples = (samples) => {
+    for (var i = 0; i < samples.length; i++) {
+      if (isEmpty(samples[i])) continue
+      var oldsample = samples[i]
+      var sampleName
+      if (!isEmpty(oldsample.document)) {
+        // Deal with the exception of the text file (they don't have url)
+        sampleName = "sample" + i.toString() + ".txt"
+      } else {
+        sampleName = this.getSampleNameFromURL(oldsample)
+        sampleName = this.renameSampleFromUrl(samples, oldsample, sampleName)
+      }
+      oldsample = setIn(oldsample, ["sampleName"], sampleName)
+      samples = setIn(samples, [i], oldsample)
+    }
+    return samples
+  }
+
+  renameSampleFromUrl = (samples, sampleToChange, sampleName) => {
+    var boolName = true
+    var v = 1
+    while (boolName) {
+      if (
+        this.getSampleUrl(this.getSampleWithName(sampleName, samples)) 
+        !== this.getSampleUrl(sampleToChange)
+      ) {
+        var res = sampleName.split(".")
+        sampleName = res[0]+"(" + v.toString() + ")."+res[1]
+        v++
+      } else {
+        boolName = false
+      }
+    }
+    return sampleName
+  }
+
+  getSampleWithName = (samples, sampleName) => {
+    samples.filter((sample)=>this.getSampleNameFromURL(sample)===sampleName)
+    return samples[0]
+  }
+
   getSampleUrl = (sample) => {
     return (
       sample.imageUrl ||
@@ -375,31 +417,51 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
+  getSampleText = (sample) =>{
+    return sample.document || undefined
+  }
+
   getSampleNameFromURL = (sample) => {
     var sampleName
     if (!isEmpty(sample)) {
-      if (!isEmpty(sample.imageUrl)) {
-        sampleName = decodeURI(sample.imageUrl).match(
-          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
-        )
-      }
-      if (!isEmpty(sample.videoUrl)) {
-        sampleName = decodeURI(sample.videoUrl).match(
-          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
-        )
-      }
-      if (!isEmpty(sample.audioUrl)) {
-        sampleName = decodeURI(sample.audioUrl).match(
-          `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
-        )
-      }
-      if (!isEmpty(sample.pdfUrl)) {
-        sampleName = decodeURI(sample.pdfUrl).match(
+      if (!isEmpty(this.getSampleUrl(sample))) {
+        sampleName = decodeURI(this.getSampleUrl(sample)).match(
           `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
         )
       }
     }
     return sampleName
+  }
+
+  setSampleProperties = async(sampleId, key, newValue) =>{
+    var jsonToChange
+    var path
+    switch (key) {
+      case "_id":
+        
+        break
+      case "url":
+        path = this.projectName + "/samples/"+ sampleId
+        jsonToChange = await this.getJSON(path)
+        if(jsonToChange.imageUrl){
+          jsonToChange["imageUrl"] = newValue
+        }else if(jsonToChange.videoUrl){
+          jsonToChange["videoUrl"] = newValue
+        }else if(jsonToChange.audioUrl){
+          jsonToChange["audioUrl"] = newValue
+        }else if(jsonToChange.pdfUrl){
+          jsonToChange["pdfUrl"] = newValue
+        }
+        await this.setJSON(path, jsonToChange)
+        break
+      default:
+        path = this.projectName + "/samples/"+ sampleId
+        jsonToChange = await this.getJSON(path)
+        jsonToChange[key] = newValue
+        await this.setJSON(path, jsonToChange)
+        break
+    }
+    this.ds = undefined
   }
 }
 
