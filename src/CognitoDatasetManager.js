@@ -279,11 +279,8 @@ class CognitoDatasetManager extends EventEmitter {
     return listJson
   }
 
-  getAssetUrl = async (sampleRefId) => {
-    return this.getAssetUrl(sampleRefId, this.projectName)
-  }
-
   getAssetUrl = async (sampleRefId, projectName) => {
+    if (!projectName) projectName = this.projectName
     //changer sampleRefId pour avoir aussi l'extension de fichier
     const url = await Storage.get(projectName + "/assets/" + sampleRefId, {
       expires: this.privateDataExpire,
@@ -317,7 +314,6 @@ class CognitoDatasetManager extends EventEmitter {
       .map((obj) => obj.key)
     return samples
   }
-
   //Create an array with all the samples annotation json
   readJSONAllSamples = async (listSamples) => {
     var json = new Array(listSamples.length)
@@ -327,6 +323,7 @@ class CognitoDatasetManager extends EventEmitter {
     }
     return json
   }
+  readJSONAllSample = this.readJSONAllSamples
 
   //get a json regardless of what it contain
   getJSON = async (path) => {
@@ -349,24 +346,29 @@ class CognitoDatasetManager extends EventEmitter {
 
   // NOTE This function is really consumming so be careful
   // Put an asset copy in AWS
-  addAsset = async (name, blob) => {
-    await Storage.put(this.projectName + "/assets/" + name, blob, {
+  addAsset = async (name, blob, projectName)=>{
+    if (!projectName) projectName = this.projectName
+    await Storage.put(projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
     }).catch((err) => console.log(err))
   }
 
   //function for json management -----------------------------------------------------------------------------------------------
-  getSampleName = (sample) => {
+  getSampleName = async (sample) => {
     var sampleName
     if (!isEmpty(sample.sampleName)) {
       sampleName = sample.sampleName
-    } else {
+    } else if (this.getSampleNameFromURL(sample)){
       sampleName = this.getSampleNameFromURL(sample)[1]
+    }else if(await this.getAssetText(sample)){
+      sampleName = sample._id +".txt"
+    } if(await this.getAssetTime(sample)){
+      sampleName = sample._id +".json"
     }
     return sampleName
   }
 
-  addNamesToSamples = (samples) => {
+  addNamesToSamples = async (samples) => {
     for (var i = 0; i < samples.length; i++) {
       if (isEmpty(samples[i])) continue
       var oldsample = samples[i]
@@ -378,8 +380,8 @@ class CognitoDatasetManager extends EventEmitter {
         sampleName = this.getSampleNameFromURL(oldsample)
         sampleName = this.renameSampleFromUrl(samples, oldsample, sampleName)
       }
-      oldsample = setIn(oldsample, ["sampleName"], sampleName)
-      samples = setIn(samples, [i], oldsample)
+      oldsample = await setIn(oldsample, ["sampleName"], sampleName)
+      samples = await setIn(samples, [i], oldsample)
     }
     return samples
   }
@@ -389,21 +391,29 @@ class CognitoDatasetManager extends EventEmitter {
     var v = 1
     while (boolName) {
       if (
-        this.getSampleUrl(this.getSampleWithName(sampleName, samples)) 
-        !== this.getSampleUrl(sampleToChange)
+        this.getSampleUrl(this.getSampleWithName(samples, sampleName[1])) 
+        !== this.getSampleUrl(sampleToChange) &&this.getSampleName(this.getSampleWithName(samples, sampleName[1])) === sampleName[1]
       ) {
-        var res = sampleName.split(".")
-        sampleName = res[0]+"(" + v.toString() + ")."+res[1]
+        if(sampleName[1].match("(.*)\\([0-9]*\\)$")){
+          sampleName[1] = sampleName[2].match("(.*)\\([0-9]*\\)$")[1] +
+          "(" +
+          v.toString() +
+          ")" +
+          "." +
+          sampleName[3]
+        }else{
+          sampleName[1] = sampleName[2]+"(" + v.toString() + ")."+sampleName[3]
+        }
         v++
       } else {
         boolName = false
       }
     }
-    return sampleName
+    return sampleName[1]
   }
 
   getSampleWithName = (samples, sampleName) => {
-    samples.filter((sample)=>this.getSampleNameFromURL(sample)===sampleName)
+    samples.filter((sample)=>this.getSampleNameFromURL(sample)[1]===sampleName)
     return samples[0]
   }
 
@@ -413,12 +423,50 @@ class CognitoDatasetManager extends EventEmitter {
       sample.videoUrl ||
       sample.audioUrl ||
       sample.pdfUrl ||
+      sample.txtUrl||
+      sample.timeUrl ||
       undefined
     )
   }
 
-  getSampleText = (sample) =>{
-    return sample.document || undefined
+  getSampleText = this.getAssetText
+  getAssetText = async (sample) =>{
+
+    if(sample.document){
+      return sample.document
+    }
+
+    if(sample.txtUrl){
+      var response = await fetch(sample.txtUrl, {
+        method: "GET",
+      }).catch((error) => {
+        console.log("Looks like there was a problem: \n", error)
+      })
+      const texte = await response.text()
+      return texte
+    }
+
+    return undefined
+  }
+
+  getSampleTime= this.getAssetTime
+  getAssetTime = async (sample) =>{
+
+    if(sample.timeData){
+      return {timeData: sample.timeData}
+    }
+
+    if(sample.timeUrl){
+      var response = await fetch(sample.timeUrl, {
+        method: "GET",
+      }).catch((error) => {
+        console.log("Looks like there was a problem: \n", error)
+      })
+      const json = await response.json()
+      return json
+    }
+
+    return undefined
   }
 
   getSampleNameFromURL = (sample) => {
@@ -427,6 +475,18 @@ class CognitoDatasetManager extends EventEmitter {
       if (!isEmpty(this.getSampleUrl(sample))) {
         sampleName = decodeURI(this.getSampleUrl(sample)).match(
           `.*\\/(([^\\/\\\\&\\?]*)\\.([a-zA-Z0-9]*))(\\?|$)`
+        )
+      }
+    }
+    return sampleName
+  }
+
+  getSampleExtensionFromURL = (sample) => {
+    var sampleName
+    if (!isEmpty(sample)) {
+      if (!isEmpty(this.getSampleUrl(sample))) {
+        sampleName = decodeURI(this.getSampleUrl(sample)).match(
+          `[^\\/\\\\&\\?]*\\.[a-zA-Z0-9]*(?:\\?|$)`
         )
       }
     }
