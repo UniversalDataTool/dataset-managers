@@ -9,7 +9,6 @@ const { from: seamless } = seamlessImmutable
 class CognitoDatasetManager extends EventEmitter {
   type = "cognito"
   ds = null
-  proxyUrl = "https://cors-anywhere.herokuapp.com/"
   constructor({
     authConfig,
     dataPrivacyLevel = "private",
@@ -346,7 +345,7 @@ class CognitoDatasetManager extends EventEmitter {
 
   // NOTE This function is really consumming so be careful
   // Put an asset copy in AWS
-  addAsset = async (name, blob, projectName)=>{
+  addAsset = async (name, blob, projectName) => {
     if (!projectName) projectName = this.projectName
     await Storage.put(projectName + "/assets/" + name, blob, {
       level: this.dataPrivacyLevel,
@@ -354,36 +353,41 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   //function for json management -----------------------------------------------------------------------------------------------
-  getSampleName = async (sample) => {
+  getAssetName = this.getSampleName
+  getSampleName = (sample) => {
     var sampleName
+    if (!sample) return
     if (!isEmpty(sample.sampleName)) {
       sampleName = sample.sampleName
-    } else if (this.getSampleNameFromURL(sample)){
+    } else if (this.getSampleNameFromURL(sample)) {
       sampleName = this.getSampleNameFromURL(sample)[1]
-    }else if(await this.getAssetText(sample)){
-      sampleName = sample._id +".txt"
-    } if(await this.getAssetTime(sample)){
-      sampleName = sample._id +".json"
+    } else if (sample.document) {
+      sampleName = sample.sampleName + ".txt"
+    } else if (sample.timeData) {
+      sampleName = sample.sampleName + ".json"
     }
     return sampleName
   }
-
-  addNamesToSamples = async (samples) => {
-    for (var i = 0; i < samples.length; i++) {
-      if (isEmpty(samples[i])) continue
-      var oldsample = samples[i]
-      var sampleName
-      if (!isEmpty(oldsample.document)) {
-        // Deal with the exception of the text file (they don't have url)
-        sampleName = "sample" + i.toString() + ".txt"
-      } else {
-        sampleName = this.getSampleNameFromURL(oldsample)
-        sampleName = this.renameSampleFromUrl(samples, oldsample, sampleName)
-      }
-      oldsample = await setIn(oldsample, ["sampleName"], sampleName)
-      samples = await setIn(samples, [i], oldsample)
+  addNameToSample = this.addNamesToSample
+  addNamesToSample = async (sample, index, samples) => {
+    console.log(samples)
+    console.log(sample)
+    if (isEmpty(samples[index])) return
+    var sampleName
+    if (!isEmpty(sample.document)) {
+      // Deal with the exception of the text file (they don't have url)
+      sampleName = "sample" + index.toString() + ".txt"
     }
-    return samples
+    if (!isEmpty(sample.timeData)) {
+      // Deal with the exception of the timeData file (they don't have url)
+      sampleName = "sample" + index.toString() + ".json"
+    } else {
+      sampleName = this.getSampleNameFromURL(sample)
+      sampleName = this.renameSampleFromUrl(samples, sample, sampleName)
+    }
+    sample = await setIn(sample, ["sampleName"], sampleName)
+    console.log(sample)
+    return sample
   }
 
   renameSampleFromUrl = (samples, sampleToChange, sampleName) => {
@@ -391,52 +395,59 @@ class CognitoDatasetManager extends EventEmitter {
     var v = 1
     while (boolName) {
       if (
-        this.getSampleUrl(this.getSampleWithName(samples, sampleName[1])) 
-        !== this.getSampleUrl(sampleToChange) &&this.getSampleName(this.getSampleWithName(samples, sampleName[1])) === sampleName[1]
+        this.getSampleUrl(this.getSampleWithName(samples, sampleName[1])) !==
+          this.getSampleUrl(sampleToChange) &&
+        this.getSampleName(this.getSampleWithName(samples, sampleName[1])) ===
+          sampleName[1]
       ) {
-        if(sampleName[1].match("(.*)\\([0-9]*\\)$")){
-          sampleName[1] = sampleName[2].match("(.*)\\([0-9]*\\)$")[1] +
-          "(" +
-          v.toString() +
-          ")" +
-          "." +
-          sampleName[3]
-        }else{
-          sampleName[1] = sampleName[2]+"(" + v.toString() + ")."+sampleName[3]
+        if (sampleName[1].match("(.*)\\([0-9]*\\)$")) {
+          sampleName[1] =
+            sampleName[2].match("(.*)\\([0-9]*\\)$")[1] +
+            "(" +
+            v.toString() +
+            ")" +
+            "." +
+            sampleName[3]
+        } else {
+          sampleName[1] =
+            sampleName[2] + "(" + v.toString() + ")." + sampleName[3]
         }
         v++
       } else {
         boolName = false
       }
     }
+
     return sampleName[1]
   }
 
   getSampleWithName = (samples, sampleName) => {
-    samples.filter((sample)=>this.getSampleNameFromURL(sample)[1]===sampleName)
+    samples = samples.filter(
+      (sample) => this.getSampleNameFromURL(sample)[1] === sampleName
+    )
     return samples[0]
   }
 
   getSampleUrl = (sample) => {
+    if (!sample) return
     return (
       sample.imageUrl ||
       sample.videoUrl ||
       sample.audioUrl ||
       sample.pdfUrl ||
-      sample.txtUrl||
+      sample.txtUrl ||
       sample.timeUrl ||
       undefined
     )
   }
 
   getSampleText = this.getAssetText
-  getAssetText = async (sample) =>{
-
-    if(sample.document){
+  getAssetText = async (sample) => {
+    if (sample.document) {
       return sample.document
     }
 
-    if(sample.txtUrl){
+    if (sample.txtUrl) {
       var response = await fetch(sample.txtUrl, {
         method: "GET",
       }).catch((error) => {
@@ -449,14 +460,13 @@ class CognitoDatasetManager extends EventEmitter {
     return undefined
   }
 
-  getSampleTime= this.getAssetTime
-  getAssetTime = async (sample) =>{
-
-    if(sample.timeData){
-      return {timeData: sample.timeData}
+  getSampleTime = this.getAssetTime
+  getAssetTime = async (sample) => {
+    if (sample.timeData) {
+      return { timeData: sample.timeData }
     }
 
-    if(sample.timeUrl){
+    if (sample.timeUrl) {
       var response = await fetch(sample.timeUrl, {
         method: "GET",
       }).catch((error) => {
@@ -493,29 +503,28 @@ class CognitoDatasetManager extends EventEmitter {
     return sampleName
   }
 
-  setSampleProperties = async(sampleId, key, newValue) =>{
+  setSampleProperties = async (sampleId, key, newValue) => {
     var jsonToChange
     var path
     switch (key) {
       case "_id":
-        
         break
       case "url":
-        path = this.projectName + "/samples/"+ sampleId
+        path = this.projectName + "/samples/" + sampleId
         jsonToChange = await this.getJSON(path)
-        if(jsonToChange.imageUrl){
+        if (jsonToChange.imageUrl) {
           jsonToChange["imageUrl"] = newValue
-        }else if(jsonToChange.videoUrl){
+        } else if (jsonToChange.videoUrl) {
           jsonToChange["videoUrl"] = newValue
-        }else if(jsonToChange.audioUrl){
+        } else if (jsonToChange.audioUrl) {
           jsonToChange["audioUrl"] = newValue
-        }else if(jsonToChange.pdfUrl){
+        } else if (jsonToChange.pdfUrl) {
           jsonToChange["pdfUrl"] = newValue
         }
         await this.setJSON(path, jsonToChange)
         break
       default:
-        path = this.projectName + "/samples/"+ sampleId
+        path = this.projectName + "/samples/" + sampleId
         jsonToChange = await this.getJSON(path)
         jsonToChange[key] = newValue
         await this.setJSON(path, jsonToChange)
