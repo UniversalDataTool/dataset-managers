@@ -290,7 +290,7 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   //get the list of existing assets
-  getListAssets = async ({ projectName = false }) => {
+  getListAssets = async (projectName) => {
     if (!projectName) projectName = this.projectName
     var result = await Storage.list(`${projectName}/assets/`, {
       level: this.dataPrivacyLevel,
@@ -303,7 +303,7 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   //List the existing samples in the folder samples of the selected project
-  getListSamples = async ({ projectName = false }) => {
+  getListSamples = async (projectName) => {
     if (!projectName) projectName = this.projectName
     var result = await Storage.list(`${projectName}/samples/`, {
       level: this.dataPrivacyLevel,
@@ -315,12 +315,17 @@ class CognitoDatasetManager extends EventEmitter {
   }
   //Create an array with all the samples annotation json
   readJSONAllSamples = async (listSamples) => {
-    var json = new Array(listSamples.length)
+    var jsons = new Array(listSamples.length)
 
     for (var i = 0; i < listSamples.length; i++) {
-      json[i] = await this.getJSON(listSamples[i])
+      jsons[i] = await this.getJSON(listSamples[i])
     }
-    return json
+    jsons = await Promise.all(
+      jsons.map(async (json) => {
+        return await this.renewUrlAws(json)
+      })
+    )
+    return jsons
   }
   readJSONAllSample = this.readJSONAllSamples
 
@@ -352,8 +357,22 @@ class CognitoDatasetManager extends EventEmitter {
     }).catch((err) => console.log(err))
   }
 
+  //Renew url aws if exist
+  renewUrlAws = async (sample) => {
+    var listAsset = await this.getListAssets()
+    var newUrl = listAsset.filter((url) => {
+      if (url.split("/assets/")[1] === this.getSampleName(sample)) return true
+      return false
+    })
+    if (isEmpty(newUrl)) return sample
+    sample = await this.setSampleUrl(
+      sample,
+      await this.getAssetUrl(newUrl[0].split("/assets/")[1])
+    )
+    return sample
+  }
+
   //function for json management -----------------------------------------------------------------------------------------------
-  getAssetName = this.getSampleName
   getSampleName = (sample) => {
     var sampleName
     if (!sample) return
@@ -362,16 +381,15 @@ class CognitoDatasetManager extends EventEmitter {
     } else if (this.getSampleNameFromURL(sample)) {
       sampleName = this.getSampleNameFromURL(sample)[1]
     } else if (sample.document) {
-      sampleName = sample.sampleName + ".txt"
+      sampleName = "sample" + ".txt"
     } else if (sample.timeData) {
-      sampleName = sample.sampleName + ".json"
+      sampleName = "sample" + ".json"
     }
     return sampleName
   }
-  addNameToSample = this.addNamesToSample
+  getAssetName = this.getSampleName
+
   addNamesToSample = async (sample, index, samples) => {
-    console.log(samples)
-    console.log(sample)
     if (isEmpty(samples[index])) return
     var sampleName
     if (!isEmpty(sample.document)) {
@@ -383,22 +401,28 @@ class CognitoDatasetManager extends EventEmitter {
       sampleName = "sample" + index.toString() + ".json"
     } else {
       sampleName = this.getSampleNameFromURL(sample)
-      sampleName = this.renameSampleFromUrl(samples, sample, sampleName)
+      if (sampleName)
+        sampleName = this.renameSampleFromUrl(samples, sample, sampleName)
     }
     sample = await setIn(sample, ["sampleName"], sampleName)
-    console.log(sample)
     return sample
   }
+  addNameToSample = this.addNamesToSample
 
   renameSampleFromUrl = (samples, sampleToChange, sampleName) => {
     var boolName = true
     var v = 1
     while (boolName) {
+      var sampleWithSameSampleName = this.getSampleWithName(
+        samples,
+        sampleName[1]
+      )
+      var urlTocompare = this.getSampleUrl(sampleWithSameSampleName)
+      var newSampleUrl = this.getSampleUrl(sampleToChange)
+      var sampleNameToCompare = this.getSampleName(sampleWithSameSampleName)
       if (
-        this.getSampleUrl(this.getSampleWithName(samples, sampleName[1])) !==
-          this.getSampleUrl(sampleToChange) &&
-        this.getSampleName(this.getSampleWithName(samples, sampleName[1])) ===
-          sampleName[1]
+        urlTocompare !== newSampleUrl &&
+        sampleNameToCompare === sampleName[1]
       ) {
         if (sampleName[1].match("(.*)\\([0-9]*\\)$")) {
           sampleName[1] =
@@ -422,9 +446,10 @@ class CognitoDatasetManager extends EventEmitter {
   }
 
   getSampleWithName = (samples, sampleName) => {
-    samples = samples.filter(
-      (sample) => this.getSampleNameFromURL(sample)[1] === sampleName
-    )
+    samples = samples.filter((sample) => {
+      if (this.getSampleName(sample) === sampleName) return true
+      return false
+    })
     return samples[0]
   }
 
@@ -441,7 +466,17 @@ class CognitoDatasetManager extends EventEmitter {
     )
   }
 
-  getSampleText = this.getAssetText
+  setSampleUrl = async (sample, newUrl) => {
+    if (!sample) return
+    if (sample.imageUrl) sample = await setIn(sample, ["imageUrl"], newUrl)
+    if (sample.videoUrl) sample = await setIn(sample, ["videoUrl"], newUrl)
+    if (sample.audioUrl) sample = await setIn(sample, ["audioUrl"], newUrl)
+    if (sample.pdfUrl) sample = await setIn(sample, ["pdfUrl"], newUrl)
+    if (sample.txtUrl) sample = await setIn(sample, ["txtUrl"], newUrl)
+    if (sample.timeUrl) sample = await setIn(sample, ["timeUrl"], newUrl)
+    return sample
+  }
+
   getAssetText = async (sample) => {
     if (sample.document) {
       return sample.document
@@ -459,8 +494,8 @@ class CognitoDatasetManager extends EventEmitter {
 
     return undefined
   }
+  getSampleText = this.getAssetText
 
-  getSampleTime = this.getAssetTime
   getAssetTime = async (sample) => {
     if (sample.timeData) {
       return { timeData: sample.timeData }
@@ -478,6 +513,7 @@ class CognitoDatasetManager extends EventEmitter {
 
     return undefined
   }
+  getSampleTime = this.getAssetTime
 
   getSampleNameFromURL = (sample) => {
     var sampleName
