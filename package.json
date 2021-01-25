@@ -37,6 +37,7 @@
     "aws-amplify": "^3.3.4",
     "axios": "^0.20.0",
     "concurrently": "^5.3.0",
+    "prettier": "^2.2.1",
     "rfc6902": "^4.0.1",
     "seamless-immutable": "^7.1.4",
     "seamless-immutable-patch": "^1.0.5"

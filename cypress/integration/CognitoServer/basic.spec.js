@@ -1,47 +1,7 @@
 import CognitoDatasetManager from "../../../dist/CognitoDatasetManager.js"
 import getAuthConfig from "./get-auth-config.js"
 import { Auth } from "aws-amplify"
-var samplesDummies = {
-  name: "TestCypress",
-  interface: {
-    type: "image_segmentation",
-    labels: ["valid", "invalid"],
-    regionTypesAllowed: ["bounding-box", "polygon", "point"],
-  },
-  samples: [
-    {
-      _id: "shcscmhiv",
-      imageUrl:
-        "https://fr.cdn.v5.futura-sciences.com/buildsv6/images/wide1920/0/0/d/00dd1479a5_108485_chat-domestique.jpg",
-      annotation: [
-        {
-          regionType: "bounding-box",
-          id: "7676796589570372",
-          centerX: 0.39035591274397247,
-          centerY: 0.48036739380022964,
-          width: 0.09184845005740527,
-          height: 0.10838117106773826,
-          color: "#ff0000",
-        },
-        {
-          regionType: "bounding-box",
-          id: "7047613988829033",
-          centerX: 0.5964408725602756,
-          centerY: 0.37841561423650977,
-          width: 0.07003444316877161,
-          height: 0.1102181400688863,
-          color: "#ff0000",
-        },
-      ],
-      brush: "complete",
-    },
-    {
-      _id: "sdjz2g1qa",
-      imageUrl:
-        "https://www.filalapat.fr/sites/default/files/2020-02/age_chat.jpg",
-    },
-  ],
-}
+
 var nameProjectTest = "TestCypress"
 const dummyUser = {
   username: Cypress.env().COGNITO_USER_NAME,
@@ -52,11 +12,20 @@ describe("Cognito Server Tests", () => {
   var authConfig
   var dm
   var user
+  var catPicture
+  var samplesDummies
   before("prepare test", async () => {
+    cy.fixture("samples-dummies.json").then((data) => {
+      samplesDummies = data
+    })
+    cy.fixture("chat.jpg").then((data) => {
+      catPicture = data
+    })
     authConfig = getAuthConfig()
     dm = await new CognitoDatasetManager({ authConfig })
     user = await Auth.signIn(dummyUser.username, dummyUser.password)
   })
+
   it("Create the CognitoDatasetManager object", async () => {
     var ready = await dm.isReady()
     expect(ready).to.equal(true)
@@ -102,19 +71,8 @@ describe("Cognito Server Tests", () => {
     expect(annotationsList.length).to.equal(2)
   })
 
-  /*await it("Test addFile", async () => {
-    var blob1 = await dm.fetchAFile(samplesDummies.samples[0].imageUrl)
-    console.log("blob1")
-    await dm.addFile(
-      "00dd1479a5_108485_chat-domestique.jpg",
-      blob1
-    )
-    var datalist = await dm.getDataListFromProject(false, false)
-    expect(datalist.length).to.equal(1)
-  })*/
-
   it("Test readJSONAllSmple", async () => {
-    var json = await dm.readJSONAllSample(await dm.getListSamples(false))
+    var json = await dm.readJSONAllSamples(await dm.getListSamples(false))
     expect(json.length).to.equal(samplesDummies.samples.length)
   })
 
@@ -202,10 +160,31 @@ describe("Cognito Server Tests", () => {
     expect(dataset.name).to.include(samplesDummies.name)
   })
 
+  it("Remove Folder Samples", async () => {
+    await dm.removeSamplesFolder(samplesDummies.name)
+    var list = await dm.getListSamples(samplesDummies.name)
+    expect(list.length).to.equal(0)
+  })
+  it("Add asset ", async () => {
+    await dm.addAsset("chat.jpg", catPicture)
+    var list = await dm.getListAssets(samplesDummies.name)
+    expect(list.length).to.equal(1)
+  })
+  it("get asset Url", async () => {
+    var url = await dm.getAssetUrl("chat.jpg")
+    expect(url.includes("chat.jpg")).to.equal(true)
+  })
+  it("Remove Folder Assets", async () => {
+    await dm.removeAssetsFolder(samplesDummies.name)
+    var list = await dm.getListAssets(samplesDummies.name)
+    expect(list.length).to.equal(0)
+  })
+
   it("Test removeProject", async () => {
     await dm.removeProject(nameProjectTest)
     await dm.removeProject(nameProjectTest + "2")
     await dm.removeProject(nameProjectTest + "3")
+    await dm.removeProject(nameProjectTest + "4")
     var projects = await dm.getProjects()
     expect(projects).to.not.include(nameProjectTest)
   })

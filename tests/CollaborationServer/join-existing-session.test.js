@@ -15,8 +15,6 @@ test("CollaborationServerDatasetManager join existing session", async (t) => {
     serverUrl: "http://localhost:" + port,
   })
   dm.requestTimeout = 5000
-
-  console.log("setting dataset...")
   await dm.setDataset({
     interface: { type: "image_classification" },
     samples: [
@@ -25,7 +23,6 @@ test("CollaborationServerDatasetManager join existing session", async (t) => {
       },
     ],
   })
-  console.log("done setting dataset...")
   const sessionId = dm.sessionId
   t.truthy(sessionId, "session id should be defined")
 
