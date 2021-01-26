@@ -1,9 +1,8 @@
 import { EventEmitter } from "events"
 import Amplify, { Storage, Auth } from "aws-amplify"
-import seamlessImmutable from "seamless-immutable"
-import { setIn } from "seamless-immutable"
-import getUrlFromJson from "./utils/get-url-from-json"
-import isEmpty from "lodash/isEmpty"
+import seamlessImmutable, { setIn } from "seamless-immutable"
+import getUrlFromJson from "../utils/get-url-from-json.js"
+import isEmpty from "lodash/isEmpty.js"
 const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
@@ -11,6 +10,7 @@ class CognitoDatasetManager extends EventEmitter {
   ds = null
   constructor({
     authConfig,
+    userConfig,
     dataPrivacyLevel = "private",
     privateDataExpire = 24 * 60 * 60,
   } = {}) {
@@ -33,6 +33,7 @@ class CognitoDatasetManager extends EventEmitter {
     this.dataPrivacyLevel = dataPrivacyLevel
 
     Amplify.configure(this.authConfig)
+    if (userConfig) Auth.signIn(userConfig.username, userConfig.password)
   }
 
   //Made sure the cognitoSetUp is finish and working
@@ -130,6 +131,10 @@ class CognitoDatasetManager extends EventEmitter {
   //get sample by index (the index follows aphabetical order in AWS)
   //IMPORTANT It can not follow the original order of samples due to AWS ways of listing files
   getSampleByIndex = async (index) => {
+    if (this.ds === null) {
+      await this.getSummary()
+    }
+
     const sampleRefId = this.ds.summary.samples[index]._id
     let sample = await this.getSample(sampleRefId)
     return sample
@@ -145,8 +150,9 @@ class CognitoDatasetManager extends EventEmitter {
 
   //set sample by id
   setSample = async (sampleRefId, newSample) => {
+    await this.removeSamples([sampleRefId])
     await this.setJSON(
-      this.projectName + "/samples/" + sampleRefId + ".json",
+      this.projectName + "/samples/" + newSample._id + ".json",
       newSample
     )
   }
@@ -174,7 +180,7 @@ class CognitoDatasetManager extends EventEmitter {
           if (obj.key.includes("/" + sampleIds[i] + ".json")) {
             await Storage.remove(obj.key, {
               level: this.dataPrivacyLevel,
-            })
+            }).catch((err) => console.log(err))
           }
         }
       })
@@ -200,6 +206,7 @@ class CognitoDatasetManager extends EventEmitter {
   //create the folder of the project and store the index information (dataset first layer of information except samples)
   createProject = async (indexjson) => {
     this.removeProject(indexjson.name)
+    this.setProject(indexjson.name)
     // This should be moved in a project manager later on
     return await Storage.put(`${indexjson.name}/index.json`, indexjson, {
       level: this.dataPrivacyLevel,
@@ -264,13 +271,15 @@ class CognitoDatasetManager extends EventEmitter {
 
   //Load the sample json and verify if exist the annotation or just the other infos
   getSamplesSummary = async () => {
+    var listJson
     const listSamples = await this.getListSamples(this.projectName)
     var json = await this.readJSONAllSamples(listSamples)
-    const listJson = json.map((obj) => ({
-      hasAnnotation: obj.annotation ? true : false,
-      _id: obj._id,
-      _url: getUrlFromJson(obj),
-    }))
+    if (json !== [])
+      listJson = json.map((obj) => ({
+        hasAnnotation: obj.annotation ? true : false,
+        _id: obj._id,
+        _url: getUrlFromJson(obj),
+      }))
     return listJson
   }
 
@@ -484,8 +493,8 @@ class CognitoDatasetManager extends EventEmitter {
       }).catch((error) => {
         console.log("Looks like there was a problem: \n", error)
       })
-      const texte = await response.text()
-      return texte
+      const text = await response.text()
+      return text
     }
 
     return undefined
