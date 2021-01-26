@@ -11,7 +11,6 @@ Cypress.config("defaultCommandTimeout", 100000)
 describe("Cognito Server Tests", () => {
   var authConfig
   var dm
-  var user
   var catPicture
   var samplesDummies
   before("prepare test", async () => {
@@ -23,7 +22,7 @@ describe("Cognito Server Tests", () => {
     })
     authConfig = getAuthConfig()
     dm = await new CognitoDatasetManager({ authConfig })
-    user = await Auth.signIn(dummyUser.username, dummyUser.password)
+    await Auth.signIn(dummyUser.username, dummyUser.password)
   })
 
   it("Create the CognitoDatasetManager object", async () => {
@@ -32,7 +31,7 @@ describe("Cognito Server Tests", () => {
     await Auth.signOut()
     ready = await dm.isReady()
     expect(ready).to.equal(false)
-    user = await Auth.signIn(dummyUser.username, dummyUser.password)
+    await Auth.signIn(dummyUser.username, dummyUser.password)
   })
 
   it("Made sure project " + nameProjectTest + " don't exist", async () => {
@@ -136,13 +135,13 @@ describe("Cognito Server Tests", () => {
 
   it("Test setSample", async () => {
     await dm.setSample("adfaef", {})
-    var annotation = await dm.getListSamples(nameProjectTest)
+    var annotation = await dm.getListSamples()
     expect(annotation.length).to.equal(3)
   })
 
   it("Test removeSamples", async () => {
     await dm.removeSamples(["adfaef"])
-    var list = await dm.getListSamples(false, false)
+    var list = await dm.getListSamples(false)
     expect(list.length).to.equal(2)
   })
 

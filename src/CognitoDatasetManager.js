@@ -260,15 +260,11 @@ class CognitoDatasetManager extends EventEmitter {
       })
     )
   }
-  removeSamples = this.removeAssets
   // These function are exclusive to this dataset ------------------------------------------------------------------------------------------------------
 
   //Load the sample json and verify if exist the annotation or just the other infos
   getSamplesSummary = async () => {
-    const listSamples = await this.getListSamples({
-      projectName: this.projectName,
-      noExtensions: false,
-    })
+    const listSamples = await this.getListSamples(this.projectName)
     var json = await this.readJSONAllSamples(listSamples)
     const listJson = json.map((obj) => ({
       hasAnnotation: obj.annotation ? true : false,
