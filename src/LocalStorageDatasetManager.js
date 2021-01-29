@@ -1,5 +1,6 @@
 import { EventEmitter } from "events"
 import seamlessImmutable from "seamless-immutable"
+import isEmpty from "lodash/isEmpty"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 
@@ -33,7 +34,7 @@ class LocalStorageDatasetManager extends EventEmitter {
   getSummary = async () => {
     return {
       samples: this.udtJSON.samples.map((s) => ({
-        hasAnnotation: Boolean(s.annotation),
+        hasAnnotation: Boolean(s.annotation) && !isEmpty(s.annotation),
         _id: s._id,
       })),
     }
