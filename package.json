@@ -23,7 +23,6 @@
     "babel-eslint": "^10.1.0",
     "browser-env": "^3.3.0",
     "cypress": "^6.0.0",
-    "dotenv": "^8.2.0",
     "dotenv-cli": "^4.0.0",
     "eslint": "^7.12.1",
     "eslint-plugin-cypress": "^2.11.2",
@@ -62,7 +61,8 @@
     },
     "extends": [
       "eslint:recommended",
-      "plugin:react/recommended"
+      "plugin:react/recommended",
+      "plugin:cypress/recommended"
     ],
     "parserOptions": {
       "ecmaFeatures": {
