@@ -23,13 +23,16 @@ const test = (type, ...args) => {
       cy.restoreLocalStorage()
     })
     it("Able to get type from dataset", () => {
-      cy.waitUntil(() => wrapper.type === type, { customMessage: "type", timeout: 10000 })
+      cy.waitUntil(() => wrapper.type === type, {
+        customMessage: "type",
+        timeout: 10000,
+      })
     })
     /*it("Test isReady", () => {
       cy.waitUntil(()=>wrapper.isReady().then((value)=>value===true))
     })*/
     it("Test setDataset/getDataset", () => {
-      cy.then({ timeout: 100000 },async () => {
+      cy.then({ timeout: 100000 }, async () => {
         await wrapper.setDataset(samplesDummies)
         cy.waitUntil(
           () =>
@@ -47,7 +50,7 @@ const test = (type, ...args) => {
       )
     })
     it("Test getDatasetProperty/setDatasetProperty", () => {
-      cy.then({ timeout: 100000 },async () => {
+      cy.then({ timeout: 100000 }, async () => {
         await wrapper.setDatasetProperty("name", "test1234")
         cy.waitUntil(
           () =>
@@ -68,7 +71,7 @@ const test = (type, ...args) => {
       )
     })
     it("Test getSample/setSample", () => {
-      cy.then({ timeout: 100000 },async () => {
+      cy.then({ timeout: 100000 }, async () => {
         var testSample = { _id: "test" }
         await wrapper.setSample("sdjz2g1qa", testSample)
         cy.waitUntil(
@@ -82,7 +85,7 @@ const test = (type, ...args) => {
       })
     })
     it("Test addSamples/removeSamples", () => {
-      cy.then({ timeout: 100000 },async () => {
+      cy.then({ timeout: 100000 }, async () => {
         await wrapper.addSamples([samplesDummies.samples[0]])
         cy.waitUntil(
           () =>
@@ -90,7 +93,7 @@ const test = (type, ...args) => {
           { customMessage: "getDataset", timeout: 10000 }
         )
       })
-      cy.then({ timeout: 100000 },async () => {
+      cy.then({ timeout: 100000 }, async () => {
         await wrapper.removeSamples([samplesDummies.samples[0]._id])
         cy.waitUntil(
           () =>
