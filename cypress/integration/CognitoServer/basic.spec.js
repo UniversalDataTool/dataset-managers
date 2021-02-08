@@ -1,4 +1,4 @@
-import CognitoDatasetManager from "../../../dist/CognitoDatasetManager.js"
+import CognitoDatasetManager from "../../../src/CognitoDatasetManager.js"
 import getAuthConfig from "./get-auth-config.js"
 import { Auth } from "aws-amplify"
 
@@ -21,7 +21,7 @@ describe("Cognito Server Tests", () => {
       catPicture = data
     })
     authConfig = getAuthConfig()
-    dm = await new CognitoDatasetManager({ authConfig })
+    dm = new CognitoDatasetManager({ authConfig })
     await Auth.signIn(dummyUser.username, dummyUser.password)
   })
 
@@ -93,14 +93,14 @@ describe("Cognito Server Tests", () => {
     expect(json._id).to.equal(samplesDummies.samples[1]._id)
   })
 
-  it("Test getSamplesSummary", async () => {
-    var samplesSummary = await dm.getSamplesSummary()
-    expect(samplesSummary[1].hasAnnotation).to.equal(false)
-  })
-
   it("Test getSummary", async () => {
     var summary = await dm.getSummary()
     expect(summary.samples[1].hasAnnotation).to.equal(false)
+  })
+
+  it("Test getSamplesSummary", async () => {
+    var samplesSummary = await dm.getSamplesSummary()
+    expect(samplesSummary[1].hasAnnotation).to.equal(false)
   })
 
   it("Test getDatasetProperty", async () => {
@@ -141,7 +141,7 @@ describe("Cognito Server Tests", () => {
 
   it("Test removeSamples", async () => {
     await dm.removeSamples(["adfaef"])
-    var list = await dm.getListSamples(false)
+    var list = await dm.getListSamples()
     expect(list.length).to.equal(2)
   })
 
