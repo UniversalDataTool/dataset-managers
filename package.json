@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": "github:UniversalDataTool/dataset-managers",
   "scripts": {
-    "start:server:collab": "micro-dev src ./node_modules/udt-collaboration-server/app.js",
+    "start:server:collab": "micro-dev ./node_modules/udt-collaboration-server/app.js",
     "build": "babel src --out-dir dist",
     "build:watch": "babel --watch src --out-dir dist",
     "test": "npm run test:node",
