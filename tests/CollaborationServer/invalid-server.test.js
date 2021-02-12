@@ -1,7 +1,5 @@
 import CollaborationServerDatasetManager from "../../src/dataset-managers/CollaborationServerDatasetManager.js"
 import test from "ava"
-import basicSuite from "../utils/basic-suite.js"
-import collaborationServer from "udt-collaboration-server"
 
 test("CollaborationServerDatasetManager when the server isn't working", async (t) => {
   const dm = new CollaborationServerDatasetManager({
