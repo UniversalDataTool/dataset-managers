@@ -36,6 +36,7 @@ class LocalStorageDatasetManager extends EventEmitter {
       samples: this.udtJSON.samples.map((s) => ({
         hasAnnotation: Boolean(s.annotation) && !isEmpty(s.annotation),
         _id: s._id,
+        brush: s.brush
       })),
     }
   }
