@@ -1,6 +1,6 @@
 import { EventEmitter } from "events"
 import seamlessImmutable from "seamless-immutable"
-import isEmpty from "lodash/isEmpty"
+import isEmpty from "lodash/isEmpty.js"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 

@@ -3,7 +3,7 @@ import Amplify, { Storage, Auth } from "aws-amplify"
 import seamlessImmutable from "seamless-immutable"
 import { setIn } from "seamless-immutable"
 import getUrlFromJson from "./utils/get-url-from-json"
-import isEmpty from "lodash/isEmpty"
+import isEmpty from "lodash/isEmpty.js"
 const { from: seamless } = seamlessImmutable
 
 class CognitoDatasetManager extends EventEmitter {
