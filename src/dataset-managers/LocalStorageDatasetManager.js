@@ -4,7 +4,8 @@ import isEmpty from "lodash/isEmpty.js"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 
-const getNewSampleRefId = () => "s" + Math.random().toString(36).slice(-8)
+const getNewSampleRefId = (NewSampleId) =>
+  NewSampleId ? NewSampleId : "s" + Math.random().toString(36).slice(-8)
 
 class LocalStorageDatasetManager extends EventEmitter {
   udtJSON = null
@@ -75,7 +76,11 @@ class LocalStorageDatasetManager extends EventEmitter {
     const sampleIndex = this.udtJSON.samples.findIndex(
       (s) => s._id === sampleRefId
     )
-    this.udtJSON = setIn(this.udtJSON, ["samples", sampleIndex], newSample)
+    if (sampleIndex !== -1) {
+      this.udtJSON = setIn(this.udtJSON, ["samples", sampleIndex], newSample)
+    } else {
+      await this.addSamples([newSample])
+    }
     this.emit("summary-changed")
   }
 
@@ -92,11 +97,11 @@ class LocalStorageDatasetManager extends EventEmitter {
       ...newUDT,
       samples: (newUDT.samples || []).map((s) => {
         const newSample = {
-          _id: getNewSampleRefId(),
+          _id: getNewSampleRefId(s._id),
           ...s,
         }
         if (usedSampleIds.has(newSample._id)) {
-          newSample._id = getNewSampleRefId()
+          newSample._id = getNewSampleRefId(newSample._id)
         }
         usedSampleIds.add(newSample._id)
         return newSample
@@ -120,7 +125,7 @@ class LocalStorageDatasetManager extends EventEmitter {
       ["samples"],
       this.udtJSON.samples.concat(
         newSamples.map((s) => ({
-          _id: getNewSampleRefId(),
+          _id: getNewSampleRefId(s._id),
           ...s,
         }))
       )
@@ -130,7 +135,7 @@ class LocalStorageDatasetManager extends EventEmitter {
 
   // Remove samples
   removeSamples = async (sampleIds) => {
-    this.udtJSON = setIn(
+    this.udtJSON = await setIn(
       this.udtJSON,
       ["samples"],
       this.udtJSON.samples.filter((s) => !sampleIds.includes(s._id))

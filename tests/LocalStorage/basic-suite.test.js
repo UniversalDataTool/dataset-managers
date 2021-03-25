@@ -1,4 +1,4 @@
-import LocalStorageDatasetManager from "../../src/LocalStorageDatasetManager.js"
+import LocalStorageDatasetManager from "../../src/dataset-managers/CollaborationServerDatasetManager.js"
 import test from "ava"
 import basicSuite from "../utils/basic-suite.js"
 
