@@ -1,4 +1,4 @@
-import CollaborationServerDatasetManager from "../../src/CollaborationServerDatasetManager.js"
+import CollaborationServerDatasetManager from "../../src/dataset-managers/CollaborationServerDatasetManager.js"
 import test from "ava"
 
 test("CollaborationServerDatasetManager when the server isn't working", async (t) => {

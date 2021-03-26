@@ -3,5 +3,6 @@ dist
 udt-collaboration-server.db
 .env
 cypress/videos
+cypress/screenshots
 debug.log
 package-lock.json

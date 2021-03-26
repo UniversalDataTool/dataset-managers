@@ -1,5 +1,5 @@
 {
   "presets": ["@babel/preset-env"],
   "plugins": ["@babel/plugin-proposal-class-properties"],
-  "ignore": ["./src/DatasetManager.type.js"]
+  "ignore": ["./src/dataset-managers/DatasetManager.type.js"]
 }

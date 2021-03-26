@@ -59,7 +59,6 @@ class LocalStorageDatasetManager extends EventEmitter {
     } else {
       this.setLocalStorage(set(dataset, key, newValue))
     }
-    this.emit("dataset-property-changed", { key })
   }
 
   // Two ways to get a sample. Using `sampleRefId` will return the sample with
@@ -82,7 +81,6 @@ class LocalStorageDatasetManager extends EventEmitter {
     } else {
       await this.addSamples([newSample])
     }
-    this.emit("summary-changed")
   }
 
   // Called whenever application config is updated. Maybe you need the app config
@@ -109,12 +107,6 @@ class LocalStorageDatasetManager extends EventEmitter {
         return newSample
       }),
     }))
-    this.emit("dataset-reloaded")
-    if (newUDT.samples !==dataset.samples) this.emit("summary-changed")
-    if (newUDT.name !==dataset.name)
-      this.emit("dataset-property-changed", { key: "name" })
-    if (newUDT.interface !==dataset.interface)
-      this.emit("dataset-property-changed", { key: "interface" })
   }
 
   // Get entire JSON dataset
@@ -133,7 +125,6 @@ class LocalStorageDatasetManager extends EventEmitter {
         }))
       )
     ))
-    this.emit("summary-changed")
   }
 
   // Remove samples
@@ -144,7 +135,6 @@ class LocalStorageDatasetManager extends EventEmitter {
       ["samples"],
       dataset.samples.filter((s) => !sampleIds.includes(s._id))
     ))
-    this.emit("summary-changed")
   }
 
   getLocalStorage = () => {
