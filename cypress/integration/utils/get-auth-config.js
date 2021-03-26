@@ -1,6 +1,5 @@
 export default () => {
   const env = Cypress.env()
-
   return {
     Auth: {
       identityPoolId: env.AWS_IDENTITY_POOL_ID,

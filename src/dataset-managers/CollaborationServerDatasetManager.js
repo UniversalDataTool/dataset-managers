@@ -1,7 +1,7 @@
 import { EventEmitter } from "events"
 import seamlessImmutable from "seamless-immutable"
 import seamlessImmutablePatch from "seamless-immutable-patch"
-import rfc6902 from "rfc6902"
+import { createPatch } from "rfc6902"
 import axios from "axios"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
@@ -25,12 +25,14 @@ class CollaborativeDatasetManager extends EventEmitter {
   // currentlyLoadedSampleMap = {}
   // currentlyLoadedSampleIds = []
 
-  constructor({ serverUrl } = {}) {
+  constructor({ serverUrl, startSession } = {}) {
     super()
     this.url = (serverUrl || defaultCollaborationServer)
       .trim()
       .replace(/\/+$/, "")
-
+    if (startSession) {
+      this.createNewSession({})
+    }
     this.currentlyLoadedSampleMap = {}
   }
 
@@ -97,7 +99,8 @@ class CollaborativeDatasetManager extends EventEmitter {
   // Protip: If you have a server you should establish a connection here if
   // you can
   isReady = async () => {
-    return Boolean(this.sessionId) && Boolean(this.summary)
+    var ready = Boolean(this.sessionId) && Boolean(this.ds && this.ds.summary)
+    return ready
   }
 
   // Gives a summary of the dataset, mostly just indicating if the samples
@@ -164,6 +167,7 @@ class CollaborativeDatasetManager extends EventEmitter {
         timeout: this.requestTimeout,
       })
       .then((r) => r.data)
+      console.log(res)
     return res
   }
 
@@ -176,7 +180,7 @@ class CollaborativeDatasetManager extends EventEmitter {
           patch: [
             {
               op: "replace",
-              path: `/samples/${sampleRefId}`,
+              path: `/sample/${sampleRefId}`,
               value: newSample,
             },
           ],
@@ -184,6 +188,9 @@ class CollaborativeDatasetManager extends EventEmitter {
         { timeout: this.requestTimeout }
       )
       .then((r) => r.data)
+      .catch((err) => {
+        console.log(err)
+      })
   }
 
   // Called whenever application config is updated. Maybe you need the app config
@@ -200,7 +207,7 @@ class CollaborativeDatasetManager extends EventEmitter {
       this.emit("dataset-reloaded")
     } else {
       const latestDS = await this.getDataset()
-      const patch = rfc6902.createPatch(latestDS, newUDT)
+      const patch = createPatch(latestDS, newUDT)
       await axios.patch(`${this.url}/api/session/${this.sessionId}`, {
         patch,
       })

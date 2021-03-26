@@ -1,4 +1,4 @@
-import CollaborationServerDatasetManager from "../../src/CollaborationServerDatasetManager.js"
+import CollaborationServerDatasetManager from "../../src/dataset-managers/CollaborationServerDatasetManager.js"
 import test from "ava"
 import collaborationServer from "udt-collaboration-server"
 import getPort from "get-port"

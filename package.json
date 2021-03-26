@@ -6,12 +6,13 @@
   "license": "MIT",
   "repository": "github:UniversalDataTool/dataset-managers",
   "scripts": {
+    "start:server:collab": "micro-dev ./node_modules/udt-collaboration-server/app.js ",
     "build": "babel src --out-dir dist",
     "build:watch": "babel --watch src --out-dir dist",
     "test": "npm run test:node",
     "test:node": "ava tests/**/*.test.js",
-    "test:browser": "dotenv -- yarn run cypress run",
-    "dev:browser": "dotenv -- yarn run cypress open"
+    "test:browser": "concurrently --kill-others \"dotenv npx cypress run\" \"npx micro-dev ./node_modules/udt-collaboration-server/app.js\"",
+    "dev:browser": "concurrently --kill-others \"dotenv npx cypress open\" \"npx micro-dev ./node_modules/udt-collaboration-server/app.js\""
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",
@@ -20,27 +21,29 @@
     "@babel/preset-env": "^7.12.13",
     "@cypress/react": "^4.16.4",
     "@semantic-release/git": "^9.0.0",
-    "ava": "^3.13.0",
+    "ava": "^3.15.0",
     "babel-eslint": "^10.1.0",
     "babel-loader": "^8.2.2",
     "browser-env": "^3.3.0",
-    "cypress": "^6.0.0",
+    "concurrently": "^6.0.0",
+    "cypress": "^6.4.0",
+    "cypress-wait-until": "^1.7.1",
     "dotenv-cli": "^4.0.0",
     "eslint": "^7.12.1",
     "eslint-plugin-cypress": "^2.11.2",
     "eslint-plugin-react": "^7.21.5",
     "get-port": "^5.1.1",
+    "micro": "^9.3.4",
+    "micro-dev": "^3.0.0",
     "mock-local-storage": "^1.1.15",
+    "prettier": "^2.2.1",
     "tmp": "^0.2.1",
-    "udt-collaboration-server": "^1.0.4"
+    "udt-collaboration-server": "^1.0.9"
   },
   "dependencies": {
     "aws-amplify": "^3.3.4",
     "axios": "^0.20.0",
-    "concurrently": "^5.3.0",
-    "prettier": "^2.2.1",
     "rfc6902": "^4.0.1",
-    "seamless-immutable": "^7.1.4",
     "seamless-immutable-patch": "^1.0.5"
   },
   "browserslist": "> 0.25%, not dead",
