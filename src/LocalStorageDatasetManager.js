@@ -4,19 +4,19 @@ import isEmpty from "lodash/isEmpty.js"
 
 const { from: seamless, set, merge, setIn } = seamlessImmutable
 
-const getNewSampleRefId = () => "s" + Math.random().toString(36).slice(-8)
+const getNewSampleRefId = (NewSampleId) =>
+  NewSampleId ? NewSampleId : "s" + Math.random().toString(36).slice(-8)
 
 class LocalStorageDatasetManager extends EventEmitter {
-  udtJSON = null
   type = "local-storage"
 
   constructor() {
     super()
-    this.udtJSON = seamless({
+    this.setLocalStorage( seamless({
       name: "New Dataset",
       interface: {},
       samples: [],
-    })
+    }))
   }
 
   // Called frequently to make sure the dataset is accessible, return true if
@@ -33,7 +33,7 @@ class LocalStorageDatasetManager extends EventEmitter {
   // https://github.com/UniversalDataTool/udt-format/blob/master/proposals/summary.md
   getSummary = async () => {
     return {
-      samples: this.udtJSON.samples.map((s) => ({
+      samples: this.getLocalStorage().samples.map((s) => ({
         hasAnnotation: Boolean(s.annotation) && !isEmpty(s.annotation),
         _id: s._id,
         brush: s.brush
@@ -46,17 +46,18 @@ class LocalStorageDatasetManager extends EventEmitter {
   // You can and should create a new object here if you have custom stuff you
   // want to store in the dataset for your server
   getDatasetProperty = async (key) => {
-    return this.udtJSON[key]
+    return this.getLocalStorage()[key]
   }
   setDatasetProperty = async (key, newValue) => {
+    var dataset = this.getLocalStorage()
     if (typeof newValue === "object") {
-      this.udtJSON = set(
-        this.udtJSON,
+      this.setLocalStorage(set(
+        dataset,
         key,
-        merge(this.udtJSON[key], newValue, { deep: true })
-      )
+        merge(dataset[key], newValue, { deep: true })
+      ))
     } else {
-      this.udtJSON = set(this.udtJSON, key, newValue)
+      this.setLocalStorage(set(dataset, key, newValue))
     }
     this.emit("dataset-property-changed", { key })
   }
@@ -64,18 +65,23 @@ class LocalStorageDatasetManager extends EventEmitter {
   // Two ways to get a sample. Using `sampleRefId` will return the sample with
   // an `_id` === sampleRefId
   getSampleByIndex = async (index) => {
-    return this.udtJSON.samples[index]
+    return this.getLocalStorage().samples[index]
   }
   getSample = async (sampleRefId) => {
-    return this.udtJSON.samples.find((s) => s._id === sampleRefId)
+    return this.getLocalStorage().samples.find((s) => s._id === sampleRefId)
   }
 
   // Set a new value for a sample
   setSample = async (sampleRefId, newSample) => {
-    const sampleIndex = this.udtJSON.samples.findIndex(
+    var dataset = this.getLocalStorage()
+    const sampleIndex = dataset.samples.findIndex(
       (s) => s._id === sampleRefId
     )
-    this.udtJSON = setIn(this.udtJSON, ["samples", sampleIndex], newSample)
+    if (sampleIndex !== -1) {
+      this.setLocalStorage(setIn(dataset, ["samples", sampleIndex], newSample))
+    } else {
+      await this.addSamples([newSample])
+    }
     this.emit("summary-changed")
   }
 
@@ -85,59 +91,68 @@ class LocalStorageDatasetManager extends EventEmitter {
 
   // Import an entire UDT JSON file
   setDataset = async (newUDT) => {
+    var dataset = this.getLocalStorage()
     const usedSampleIds = new Set()
-    this.udtJSON = seamless({
+    this.setLocalStorage(seamless({
       name: "New Dataset",
       interface: {},
       ...newUDT,
       samples: (newUDT.samples || []).map((s) => {
         const newSample = {
-          _id: getNewSampleRefId(),
+          _id: getNewSampleRefId(s._id),
           ...s,
         }
         if (usedSampleIds.has(newSample._id)) {
-          newSample._id = getNewSampleRefId()
+          newSample._id = getNewSampleRefId(newSample._id)
         }
         usedSampleIds.add(newSample._id)
         return newSample
       }),
-    })
+    }))
     this.emit("dataset-reloaded")
-    if (newUDT.samples !== this.udtJSON.samples) this.emit("summary-changed")
-    if (newUDT.name !== this.udtJSON.name)
+    if (newUDT.samples !==dataset.samples) this.emit("summary-changed")
+    if (newUDT.name !==dataset.name)
       this.emit("dataset-property-changed", { key: "name" })
-    if (newUDT.interface !== this.udtJSON.interface)
+    if (newUDT.interface !==dataset.interface)
       this.emit("dataset-property-changed", { key: "interface" })
   }
 
   // Get entire JSON dataset
-  getDataset = async () => this.udtJSON
+  getDataset = async () => this.getLocalStorage()
 
   // Add samples to the dataset
   addSamples = async (newSamples) => {
-    this.udtJSON = setIn(
-      this.udtJSON,
+    var dataset = this.getLocalStorage()
+    this.setLocalStorage(setIn(
+      dataset,
       ["samples"],
-      this.udtJSON.samples.concat(
+      dataset.samples.concat(
         newSamples.map((s) => ({
-          _id: getNewSampleRefId(),
+          _id: getNewSampleRefId(s._id),
           ...s,
         }))
       )
-    )
+    ))
     this.emit("summary-changed")
   }
 
   // Remove samples
   removeSamples = async (sampleIds) => {
-    this.udtJSON = setIn(
-      this.udtJSON,
+    var dataset = this.getLocalStorage()
+    this.setLocalStorage(await setIn(
+      dataset,
       ["samples"],
-      this.udtJSON.samples.filter((s) => !sampleIds.includes(s._id))
-    )
+      dataset.samples.filter((s) => !sampleIds.includes(s._id))
+    ))
     this.emit("summary-changed")
   }
 
+  getLocalStorage = () => {
+    return JSON.parse(localStorage.getItem("udtJSON"))
+  }
+  setLocalStorage= (Dataset)=>{
+    localStorage.setItem("udtJSON",JSON.stringify(Dataset))
+  }
   // -------------------------------
   // OPTIONAL
   // -------------------------------
@@ -157,3 +172,4 @@ class LocalStorageDatasetManager extends EventEmitter {
 }
 
 export default LocalStorageDatasetManager
+
